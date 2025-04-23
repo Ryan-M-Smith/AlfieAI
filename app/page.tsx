@@ -13,6 +13,7 @@ import Markdown from "react-markdown";
 import ChatBubble from "@/components/chat-bubble";
 import ChatContainer from "@/components/chat-container";
 import InputBar from "@/components/input-bar";
+import Hero from "@/components/hero";
 
 interface MessageData {
 	content: 	ReactNode;
@@ -96,30 +97,29 @@ export default function Chat(): JSX.Element {
 		setMessages(newMessages);
 	}, [response]);
 
-	// Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-	// tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-	// quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-	// Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-	// fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-	// culpa qui officia deserunt mollit anim id est laborum.
-
 	return (
 		<div className="h-full w-full">
 			<main className="md:mx-30 lg:mx-48 h-full flex flex-col">
 				<div ref={divRef} className="flex-grow overflow-y-auto">
-					<ChatContainer className="pb-28 pt-10 h-full">
-						{
-							messages.map(({content, isLoading}, i) => (
-								<ChatBubble 
-									key={i}
-									align={i % 2 == 0 ? "right" : "left"} 
-									isLoading={isLoading} 
-								>
-									{content}
-								</ChatBubble>
-							))
-						}
-					</ChatContainer>
+					{
+						messages.length > 0? (
+							<ChatContainer className="pb-28 pt-10 h-full">
+								{
+									messages.map(({content, isLoading}, i) => (
+										<ChatBubble 
+											key={i}
+											align={i % 2 == 0 ? "right" : "left"} 
+											isLoading={isLoading} 
+										>
+											{content}
+										</ChatBubble>
+									))
+								}
+							</ChatContainer>
+						) : (
+							<Hero/>
+						)
+					}
 				</div>
 
 				<InputBar onSubmit={setQuery}/>
