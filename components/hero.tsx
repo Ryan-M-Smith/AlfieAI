@@ -30,7 +30,7 @@ export default function Hero(): JSX.Element {
 			<div className="relative">
 				<div className={`
 					flex flex-col justify-center items-center dark:bg-default-50 bg-blue-200
-					dark:text-gray-200 p-6 sm:p-10 rounded-lg
+					dark:text-gray-200 p-6 sm:p-10 rounded-[16px]
 				`}>
 					<Image
 						className="rounded-[16px]"
