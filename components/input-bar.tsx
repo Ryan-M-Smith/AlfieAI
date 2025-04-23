@@ -48,7 +48,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 	
 			{/* Input wrapper */}
 			<div className="flex justify-center w-full relative z-10 pt-7">
-				<div className="w-full shadow-lg dark:shadow-gray-200 shadow-gray-700 rounded-full">
+				<div className="w-full shadow-lg dark:shadow-blue-300 shadow-gray-700 rounded-full">
 					<Input
 						className="opacity-50"
 						radius="full"
