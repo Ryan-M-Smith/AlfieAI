@@ -30,19 +30,25 @@ export default function Hero(): JSX.Element {
 			<div className="relative">
 				<div className={`
 					flex flex-col justify-center items-center dark:bg-default-50 bg-blue-200
-					dark:text-gray-200 p-10 rounded-lg
+					dark:text-gray-200 p-6 sm:p-10 rounded-lg
 				`}>
-					<Image className="rounded-[16px]" src="/logo.png" alt="AlfieAI logo" width={256} height={256}/>
-					
-					<h1 className="text-5xl font-bold mt-8">
+					<Image
+						className="rounded-[16px]"
+						src="/logo.png"
+						alt="AlfieAI logo"
+						width={192} // Adjusted for smaller screens
+						height={192} // Adjusted for smaller screens
+					/>
+
+					<h1 className="text-3xl sm:text-5xl font-bold mt-6 sm:mt-8">
 						Say hello to AlfieAI 👋
 					</h1>
 
-					<p className="text-2xl mt-4">
+					<p className="text-lg sm:text-2xl mt-4">
 						The AI expert on Juniata College. No eagle flies without AI! 🦅
 					</p>
 
-					<div className="flex gap-x-1 text-sm italic text-gray-500 mt-8 mb-0">
+					<div className="flex flex-wrap justify-center gap-x-1 text-xs sm:text-sm italic text-gray-500 mt-6 sm:mt-8 mb-0">
 						<span> Copyright © 2025 Ryan Smith & Adithya Kommi. Powered by </span>
 						<Link
 							className="underline"
@@ -76,7 +82,7 @@ export default function Hero(): JSX.Element {
 				</div>
 
 				<motion.div
-					className="absolute -inset-[10px] -z-10 rounded-[16px] shadow-lg dark:shadow-blue-300 shadow-gray-700"
+					className="absolute -inset-[6px] sm:-inset-[10px] -z-10 rounded-[16px] shadow-lg dark:shadow-blue-300 shadow-gray-700"
 					style={{ background: bg }}
 				/>
 			</div>
