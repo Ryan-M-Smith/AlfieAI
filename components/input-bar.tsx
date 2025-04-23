@@ -13,7 +13,7 @@ import { JSX, KeyboardEvent, useState } from "react";
 
 interface InputBarProps {
 	className?: string;
-	onSubmit: (value: string) => void;
+	onSubmit: 	(value: string) => void;
 }
 
 export default function InputBar({ className, onSubmit }: InputBarProps): JSX.Element {
@@ -44,11 +44,11 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 	return (
 		<div className={`${className} fixed bottom-10 left-0 w-full px-4 sm:px-48`}>
 			{/* Backdrop blocker */}
-			<div className="absolute inset-x-0 h-[150px] bg-default-50 z-0"/>
+			<div className="absolute inset-x-0 h-[150px] dark:bg-default-50 bg-blue-200 z-0"/>
 	
 			{/* Input wrapper */}
 			<div className="flex justify-center w-full relative z-10 pt-7">
-				<div className="w-full shadow-lg shadow-blue-300 rounded-full">
+				<div className="w-full shadow-lg dark:shadow-gray-200 shadow-gray-700 rounded-full">
 					<Input
 						className="opacity-50"
 						radius="full"
