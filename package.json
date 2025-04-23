@@ -29,12 +29,15 @@
     "next": "15.3.1",
     "next-themes": "^0.4.6",
     "react": "19.1.0",
+    "react-aiwriter": "^1.0.0",
     "react-dom": "19.1.0",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "15.3.1",
     "@react-types/shared": "3.29.0",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/node": "22.14.1",
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.2",
