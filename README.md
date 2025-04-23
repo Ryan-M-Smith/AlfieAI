@@ -1,6 +1,6 @@
 # AlfieAI
 
-## "No Eagle Flies Without AI"
+## The AI expert on Juniata College. No eagle flies without AI! 🦅
 
 An AI model designed to provide Juniata College students with relevant, up-to-date information about their
 school and the school community.
