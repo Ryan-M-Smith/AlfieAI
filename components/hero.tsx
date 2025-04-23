@@ -49,7 +49,10 @@ export default function Hero(): JSX.Element {
 					</p>
 
 					<div className="flex flex-wrap justify-center gap-x-1 text-xs sm:text-sm italic text-gray-500 mt-6 sm:mt-8 mb-0">
-						<span> Copyright © 2025 Ryan Smith & Adithya Kommi. Powered by </span>
+						<span>
+							Copyright © 2025 Ryan Smith & Adithya Kommi. Logo copyright © 2025
+							Shania Lunsford. All rights reserved. Powered by
+						</span>
 						<Link
 							className="underline"
 							href="https://nextjs.org"
