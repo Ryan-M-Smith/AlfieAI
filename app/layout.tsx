@@ -30,11 +30,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
 	return (
-		<html className="bg-background" lang="en" suppressHydrationWarning>
+		<html className="h-screen dark:bg-default-100 light:bg-gray-100 overscroll-none" lang="en" suppressHydrationWarning>
 			<head/>
 			<body
 				className={clsx(
-					"min-h-screen bg-background font-sans antialiased overscroll-none",
+					"h-screen font-sans antialiased",
 					fontSans.variable,
 				)}
 			>
