@@ -7,9 +7,6 @@ import { fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 
-import { ThemeProvider } from "next-themes";
-import { HeroUIProvider } from "@heroui/system";
-
 export const metadata: Metadata = {
 	title: {
 		default: siteConfig.name,
