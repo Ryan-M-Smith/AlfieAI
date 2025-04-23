@@ -28,7 +28,7 @@ export default function ChatBubble({ className, children, align }: ChatBubblePro
 
 				{ /* Tail */}
 				<TbTriangleInvertedFilled
-					className={`relative top-[-13] ${side} text-default-100 rotate-[3deg]`}
+					className={`relative top-[-15] ${side} text-default-100 rotate-[3deg]`}
 					size={30}
 				/>
 			</div>
