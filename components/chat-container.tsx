@@ -15,10 +15,12 @@ interface ChatContainerProps {
 
 export default function ChatContainer({ className, children }: ChatContainerProps): JSX.Element {
 	return (
-		<div className={`
-			${className} flex flex-col scroll-smooth snap-end items-center
-			sm:items-start px-4 sm:px-6 md:px-8
-		`}>
+		<div
+			className={`
+				${className} bg-transparent flex flex-col items-center overflow-scroll overscroll-none
+				sm:items-start px-4 sm:px-6 md:px-8 snap-end
+			`}
+		>
 			{children}
 		</div>
 	);
