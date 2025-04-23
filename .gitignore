@@ -17,6 +17,7 @@
 .DS_Store
 *.pem
 .vscode
+gemini-credentials.json
 
 # Debug
 npm-debug.log*
@@ -25,6 +26,7 @@ yarn-error.log*
 
 # Local env files
 .env*.local
+.env
 
 # Vercel
 .vercel
