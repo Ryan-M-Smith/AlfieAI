@@ -1,7 +1,9 @@
 import "@/styles/globals.css";
 
+import { Analytics } from "@vercel/analytics/react";
 import clsx from "clsx";
 import { Metadata, Viewport } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import { fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
@@ -42,6 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
 					disableTransitionOnChange: true
 				}}>
 					{children}
+					<Analytics mode="production"/>
+					<SpeedInsights/>
 				</Providers>
 			</body>
 		</html>
