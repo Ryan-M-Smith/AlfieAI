@@ -4,7 +4,8 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory, SafetySetting } from "@google/genai";
+import { GenerateContentConfig, GoogleGenAI, HarmBlockThreshold, HarmCategory, SafetySetting, GoogleSearch } from "@google/genai";
+
 
 const genAI = new GoogleGenAI({
 	vertexai: true,
@@ -17,23 +18,18 @@ const modelID = "gemini-2.5-flash-preview-04-17";
 const context = {
 	text: 	`You are an AI model designed to give targeted, accurate information about
 			Juniata College. Make sure to be as accurate as possible, format data in lists
-			when possible, and use the internet if you can't find relevant or correct answers.`
+			when possible, and use the internet if you can't find relevant or correct answers.
+			Use bullet points and lists when possible. Remove Google search references from responses.
+			Don't add a space between text and periods at the end of a sentence.`,
 };
   
-const modelConfig = {
+const modelConfig: GenerateContentConfig = {
 	maxOutputTokens: 8192,
 	temperature: 1,
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
-
-	speechConfig: {
-		voiceConfig: {
-			prebuiltVoiceConfig: {
-				voiceName: "zephyr",
-			},
-		},
-	},
+	tools: [{ googleSearch: true }],
 
 	safetySettings: [
 		{
@@ -78,12 +74,10 @@ export default async function generate(query: string) {
 	const chunks: string[] = [];
 
 	for await (const chunk of response) {
-		if (chunk.text) {
-			chunks.push(chunk.text);
-		}
-		else {
-			chunks.push(JSON.stringify(chunk) + '\n');
-		}
+		const text = chunk.text? chunk.text : JSON.stringify(chunk);
+		const sanitizedText = text.replace(/\[\d+(?:,\s*\d+)*\]/g, "");
+		
+		chunks.push(sanitizedText);
 	}
 
 	return chunks.join("");
