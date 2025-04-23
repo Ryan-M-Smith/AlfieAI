@@ -4,10 +4,12 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
-import { GenerateContentConfig, GoogleGenAI, HarmBlockThreshold, HarmCategory, SafetySetting, GoogleSearch } from "@google/genai";
+import { GenerateContentConfig, GoogleGenAI, HarmBlockThreshold, HarmCategory, SafetySetting } from "@google/genai";
 
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || "{}");
 
 const genAI = new GoogleGenAI({
+	googleAuthOptions: { credentials: credentials },
 	vertexai: true,
 	project: 'gen-lang-client-0521416763',
 	location: 'us-central1'
@@ -76,7 +78,7 @@ export default async function generate(query: string) {
 	for await (const chunk of response) {
 		const text = chunk.text? chunk.text : JSON.stringify(chunk);
 		const sanitizedText = text.replace(/\[\d+(?:,\s*\d+)*\]/g, "");
-		
+
 		chunks.push(sanitizedText);
 	}
 
