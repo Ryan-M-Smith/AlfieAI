@@ -24,8 +24,8 @@ const context = {
 	text:  `You are an AI model designed to give targeted, accurate information about
 			Juniata College. Make sure to be as accurate as possible, format data in lists
 			when possible, and use the internet if you can't find relevant or correct answers.
-			Use bullet points and lists when possible. Remove Google search references from responses.
-			Don't add a space between text and periods at the end of a sentence.`,
+			Use bullet points and lists when possible. If necessary, return a list of sources
+			to support your answers.`,
 };
   
 const modelConfig: GenerateContentConfig = {
