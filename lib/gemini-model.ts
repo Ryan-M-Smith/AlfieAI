@@ -4,7 +4,10 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
-import { GenerateContentConfig, GoogleGenAI, HarmBlockThreshold, HarmCategory, SafetySetting } from "@google/genai";
+import {
+	CreateChatParameters, GenerateContentConfig, GoogleGenAI,
+	HarmBlockThreshold, HarmCategory, SafetySetting
+} from "@google/genai";
 
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || "{}");
 
@@ -18,7 +21,7 @@ const genAI = new GoogleGenAI({
 const modelID = "gemini-2.5-flash-preview-04-17";
 
 const context = {
-	text: 	`You are an AI model designed to give targeted, accurate information about
+	text:  `You are an AI model designed to give targeted, accurate information about
 			Juniata College. Make sure to be as accurate as possible, format data in lists
 			when possible, and use the internet if you can't find relevant or correct answers.
 			Use bullet points and lists when possible. Remove Google search references from responses.
@@ -26,7 +29,6 @@ const context = {
 };
   
 const modelConfig: GenerateContentConfig = {
-	maxOutputTokens: 8192,
 	temperature: 1,
 	topP: 0.95,
 	seed: 0,
@@ -60,19 +62,22 @@ const modelConfig: GenerateContentConfig = {
 	},
 };
 
+const chatConfig: CreateChatParameters = {
+	model: modelID,
+	config: modelConfig, 
+};
+
+const chat = genAI.chats.create(chatConfig);
+
 export default async function generate(query: string) {
 	const contents = {
 		role: "user",
 		parts: [{ text: query }]
 	};
 	
-	const req = {
-		model: modelID,
-		contents: JSON.stringify(contents),
-		config: modelConfig
-	};
+	const req = { message: query };
 		
-	const response = await genAI.models.generateContentStream(req);
+	const response = await chat.sendMessageStream(req);
 	const chunks: string[] = [];
 
 	for await (const chunk of response) {
