@@ -70,14 +70,9 @@ const chatConfig: CreateChatParameters = {
 const chat = genAI.chats.create(chatConfig);
 
 export default async function generate(query: string) {
-	const contents = {
-		role: "user",
-		parts: [{ text: query }]
-	};
-	
-	const req = { message: query };
-		
-	const response = await chat.sendMessageStream(req);
+	const response = await chat.sendMessageStream({
+		message: query
+	});
 	const chunks: string[] = [];
 
 	for await (const chunk of response) {
