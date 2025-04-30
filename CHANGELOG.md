@@ -8,3 +8,4 @@
 
 * Include chat history and context
 * Make responses sound more human-like and accessible
+* Adjusted the model's context window
