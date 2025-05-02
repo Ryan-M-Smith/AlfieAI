@@ -9,14 +9,7 @@ import {
 	HarmBlockThreshold, HarmCategory, SafetySetting
 } from "@google/genai";
 
-const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || "{}");
-
-const genAI = new GoogleGenAI({
-	googleAuthOptions: { credentials: credentials },
-	vertexai: true,
-	project: 'gen-lang-client-0521416763',
-	location: 'us-central1'
-});
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const modelID = "gemini-2.5-flash-preview-04-17";
 
@@ -69,18 +62,66 @@ const chatConfig: CreateChatParameters = {
 
 const chat = genAI.chats.create(chatConfig);
 
-export default async function generate(query: string) {
-	const response = await chat.sendMessageStream({
-		message: query
+export async function generate(query: string) {
+	return new ReadableStream({
+		start: async (controller) => {
+			const response = await chat.sendMessageStream({
+				message: query
+			});
+
+		
+			for await (const chunk of response) {
+				if (!chunk.text) {
+					continue;
+				}
+
+				const text = chunk.text;
+				const sanitizedText = text.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, "");
+				controller.enqueue(sanitizedText);
+			}
+
+			controller.close();
+		}
 	});
-	const chunks: string[] = [];
+}
 
-	for await (const chunk of response) {
-		const text = chunk.text? chunk.text : JSON.stringify(chunk);
-		const sanitizedText = text.replace(/\[\d+(?:,\s*\d+)*\]/g, "");
+export async function generateWithChunking(query: string, chunkSize: number) {
+  return new ReadableStream({
+    	async start(controller) {
+			const startTime = performance.now();
 
-		chunks.push(sanitizedText);
-	}
+			const response = await chat.sendMessageStream({
+				message: query
+			});
 
-	return chunks.join("");
+			const endTime = performance.now();
+			console.log(`Time taken for sendMessageStream: ${Math.round(endTime - startTime)}ms`);
+
+			let buffer = ""; 
+
+			for await (const chunk of response) {
+				if (!chunk.text) {
+					continue;
+				}
+
+				const text = chunk.text;
+				buffer += text;
+				console.log(text);
+
+				// Split the buffer into chunks of the specified size
+				while (buffer.length >= chunkSize) {
+					const chunkToSend = buffer.slice(0, chunkSize);
+					buffer = buffer.slice(chunkSize);
+					controller.enqueue(chunkToSend);
+				}
+			}
+
+			// Send any remaining text in the buffer
+			if (buffer.length > 0) {
+				controller.enqueue(buffer);
+			}
+
+			controller.close();
+		}
+  	});
 }

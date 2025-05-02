@@ -34,7 +34,7 @@ export default function Chat(): JSX.Element {
 
 		const el = divRef.current;
     	el.scrollTop = el.scrollHeight;
-	}, [messages]);
+	}, [messages]);	
 
 	// Post a message and wait for a response
 	useEffect(() => {
@@ -58,6 +58,8 @@ export default function Chat(): JSX.Element {
 
 		// Prompt the model for a response
 		(async () => {
+			setResponse("");
+
 			const response = await fetch("/api/query", {
 				method: "POST",
 				headers: {
@@ -68,8 +70,18 @@ export default function Chat(): JSX.Element {
 				})
 			});
 
-			const json = await response.json();
-			setResponse(json.response);
+			const reader = response.body?.getReader();
+
+			while (true) {
+				const { done, value } = await reader?.read() ?? {};
+
+				if (done) {
+					break;
+				}
+
+				const text = new TextDecoder("utf-8").decode(value);
+				setResponse(prev => prev + text);
+			}
 		})();
 	}, [query]);
 
@@ -79,17 +91,18 @@ export default function Chat(): JSX.Element {
 			return;
 		}
 
-		// The most recent message should be the loading message for the model
+		// Update the loading message incrementally with the response chunks
 		const newMessages = [...messages];
 		newMessages[newMessages.length - 1] = {
 			content: (
-				<AIWriter>
-					<span className="prose">
-						<Markdown>
-							{response}
-						</Markdown>
-					</span>
-				</AIWriter>
+				<span className={`
+					prose prose-headings:text-default-foreground
+					prose-strong:text-default-foreground prose-strong:font-bold text-default-foreground
+				`}>
+					<Markdown>
+						{response}
+					</Markdown>
+				</span>
 			),
 			isLoading: false
 		} satisfies MessageData;
