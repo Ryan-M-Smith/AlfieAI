@@ -10,3 +10,8 @@
 * Make responses sound more human-like and accessible
 * Adjusted the model's context window
 * Fix the corrupted favicon
+
+## v1.2.0 - 5/2/25
+
+* Stream responses from the server rather than displaying them after the fact
+* Descrease response time
