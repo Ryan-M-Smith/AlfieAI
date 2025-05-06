@@ -36,8 +36,9 @@ export default function Hero(): JSX.Element {
 						className="rounded-[16px]"
 						src="/logo.png"
 						alt="AlfieAI logo"
-						width={192} // Adjusted for smaller screens
-						height={192} // Adjusted for smaller screens
+						width={192}
+						height={192}
+						priority
 					/>
 
 					<h1 className="text-3xl sm:text-5xl font-bold mt-6 sm:mt-8">
