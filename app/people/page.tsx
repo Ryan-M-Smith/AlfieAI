@@ -17,7 +17,7 @@ export default function People(): JSX.Element {
 					<h1 className="text-4xl sm:text-7xl flex justify-center items-center text-center">
 						<span className="flex flex-row justify-center items-center gap-2 sm:gap-5">
 							<span>AlfieAI</span>
-							<BsAsterisk/>
+							<BsAsterisk className="sm:size-1 lg:size-10"/>
 							<span className="font-serif">People</span>
 						</span>
 					</h1>
