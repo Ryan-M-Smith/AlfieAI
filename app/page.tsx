@@ -6,7 +6,6 @@
 
 "use client";
 
-import AIWriter from "react-aiwriter";
 import { JSX, ReactNode, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 
