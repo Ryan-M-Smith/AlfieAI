@@ -4,8 +4,17 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
+import fs from "fs";
+
 export async function embed(text: string) {
-	process.env.TRANSFORMERS_CACHE = "/tmp/.transformers_cache";
+	const cachePath = "/tmp/.transformers_cache";
+	process.env.TRANSFORMERS_CACHE = cachePath;
+
+	// Ensure the directory exists
+	if (!fs.existsSync(cachePath)) {
+		fs.mkdirSync(cachePath, { recursive: true });
+	}
+
 	const { pipeline } = await import("@xenova/transformers");
 
 	// Load the embedding pipeline with a sentence transformer model
