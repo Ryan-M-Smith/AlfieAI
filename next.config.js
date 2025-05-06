@@ -1,6 +1,3 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {};
-
 const isPeopleSubdomain = process.env.SUBDOMAIN === 'people';
 
 module.exports = {
