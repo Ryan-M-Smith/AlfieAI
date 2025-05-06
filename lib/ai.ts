@@ -19,7 +19,7 @@ export async function embed(text: string) {
 	const extractor = await pipeline(
 		"feature-extraction",
 		"Xenova/all-MiniLM-L6-v2",
-		{ cache_dir: cachePath }
+		{ cache_dir: "/dev/null" }
 	);
 
 	// Get embedding for a sentence
