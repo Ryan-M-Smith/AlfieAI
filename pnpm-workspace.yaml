@@ -1,5 +1,6 @@
 onlyBuiltDependencies:
   - '@heroui/shared-utils'
   - '@vercel/speed-insights'
+  - protobufjs
   - sharp
   - unrs-resolver
