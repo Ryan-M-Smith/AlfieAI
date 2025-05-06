@@ -9,12 +9,16 @@
 import { Button } from "@heroui/button";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { IoSearch } from "react-icons/io5";
-import { JSX, KeyboardEvent, useEffect, useState } from "react";
+import { Dispatch, JSX, KeyboardEvent, SetStateAction, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@heroui/input";
 
-export default function SearchBox(): JSX.Element {
+interface SearchBoxProps {
+	setIsSearching: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Element {
 	const router = useRouter();
 
 	const [query, setQuery] = useState<string>("");
@@ -28,7 +32,6 @@ export default function SearchBox(): JSX.Element {
 		"Engineers who work in big tech",
 		"Scientists using machine learning in their research",
 	];
-
 
 	useEffect(() => {
 		const index = Math.floor(Math.random() * placeholders.length);
@@ -51,6 +54,8 @@ export default function SearchBox(): JSX.Element {
 			return;
 		}
 
+		setIsSearching(true);
+		
 		const encodedQuery = encodeURIComponent(query);
 		router.push(`/people/search?query=${encodedQuery}`);
 	}
