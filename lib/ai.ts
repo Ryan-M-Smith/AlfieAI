@@ -5,20 +5,22 @@
 //
 
 import fs from "fs";
+import { pipeline } from "@xenova/transformers";
 
 export async function embed(text: string) {
-	const cachePath = "/tmp/.transformers_cache";
-	process.env.TRANSFORMERS_CACHE = cachePath;
+	const cachePath = process.env.TRANSFORMERS_CACHE_DIR!;
 
 	// Ensure the directory exists
 	if (!fs.existsSync(cachePath)) {
 		fs.mkdirSync(cachePath, { recursive: true });
 	}
 
-	const { pipeline } = await import("@xenova/transformers");
-
 	// Load the embedding pipeline with a sentence transformer model
-	const extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+	const extractor = await pipeline(
+		"feature-extraction",
+		"Xenova/all-MiniLM-L6-v2",
+		{ cache_dir: cachePath }
+	);
 
 	// Get embedding for a sentence
 	const output = await extractor(text, {
