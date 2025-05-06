@@ -41,6 +41,7 @@ export default function SearchBox(): JSX.Element {
 			variant="light"
 			radius="full"
 			startContent={<FaArrowCircleUp size={30}/>}
+			onPress={sendQuery}
 			isIconOnly
 		/>
 	);
