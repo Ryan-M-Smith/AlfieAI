@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 
-module.exports = nextConfig;
+const isPeopleSubdomain = process.env.SUBDOMAIN === 'people';
+
+module.exports = {
+  assetPrefix: isPeopleSubdomain ? 'https://people.alfieai.fyi' : '',
+};
