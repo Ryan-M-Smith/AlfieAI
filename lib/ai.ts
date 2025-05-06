@@ -7,6 +7,13 @@
 import { pipeline } from "@xenova/transformers"
 
 export async function embed(text: string) {
+	if (process.env.NODE_ENV === "production") {
+		process.env.TRANSFORMERS_CACHE = "/tmp/.transformers_cache";
+	}
+
+// Then your import and usage of @xenova/transformers...
+
+	
 	// Load the embedding pipeline with a sentence transformer model
 	const extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
 
