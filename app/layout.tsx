@@ -1,7 +1,6 @@
 import "@/styles/globals.css";
 
 import { Analytics } from "@vercel/analytics/react";
-import clsx from "clsx";
 import { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
@@ -33,12 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
 			<head>
 				<meta name="google-site-verification" content="9vfCGFrG_b3GRRS8iTZ1tIYAe_Ek0OhxcQgsVKzeza8"/>
 			</head>
-			<body
-				className={clsx(
-					"h-screen font-sans antialiased",
-					fontSans.variable,
-				)}
-			>
+			<body className={`h-screen font-sans antialiased ${fontSans.variable}`}>
 				<Providers themeProps={{
 					attribute: "class",
 					defaultTheme: "system",
