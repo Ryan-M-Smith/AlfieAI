@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Textarea } from "@heroui/input";
 
 interface SearchBoxProps {
-	setIsSearching: Dispatch<SetStateAction<boolean>>;
+	setIsSearching?: Dispatch<SetStateAction<boolean>>;
 }
 
 export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Element {
@@ -54,8 +54,10 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 			return;
 		}
 
-		setIsSearching(true);
-		
+		if (setIsSearching) {
+			setIsSearching(true);
+		}
+
 		const encodedQuery = encodeURIComponent(query);
 		router.push(`/people/search?query=${encodedQuery}`);
 	}
