@@ -42,6 +42,17 @@ export default function SearchResults() {
 		})();
 	}, [query]);
 
+	const getInfo = (profile: any) => {
+		if (!profile.headline) {
+			return profile.title
+		}
+		else {
+			return profile.headline.length > 75?
+				profile.headline.slice(0, 75).trim() + "..." :
+				profile.headline
+		}
+	}
+
 	return (
 		<div className="flex flex-col justify-center items-center gap-y-8">
 			<div className="text-2xl text-center">
@@ -71,13 +82,7 @@ export default function SearchResults() {
 										</Link>
 									</span>
 								</h2>
-								<p className="text-gray-600">
-									{
-										profile.headline.length > 75?
-											profile.headline.slice(0, 75).trim() + "..." :
-											profile.headline
-									}
-								</p>
+								<p className="text-gray-600"> {getInfo(profile)} </p>
 							</div>
 						</div>
 					))
