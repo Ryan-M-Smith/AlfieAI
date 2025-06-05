@@ -22,7 +22,9 @@ export default function SearchResults() {
 	const [results, setResults] = useState<any[]>([]);
 
 	useEffect(() => {
-		if (!query) return;
+		if (!query) {
+			return;
+		}
 
 		(async () => {
 			const decodedQuery = decodeURIComponent(query);
@@ -35,6 +37,7 @@ export default function SearchResults() {
 			});
 			const { results } = await response.json();
 			setResults(results);
+			console.log("Search results:", results);
 			setIsLoading(false);
 		})();
 	}, [query]);
@@ -55,7 +58,7 @@ export default function SearchResults() {
 				<SearchBox setIsSearching={setIsLoading}/>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-4/5 px-4 pb-2">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-4/5 px-4 pb-5">
 				{!isLoading &&
 					results.map((profile, i) => (
 						<div key={i} className="flex flex-col justify-start items-start p-4 border rounded-lg shadow-md">
@@ -68,7 +71,13 @@ export default function SearchResults() {
 										</Link>
 									</span>
 								</h2>
-								<p className="text-gray-600">{profile.title}</p>
+								<p className="text-gray-600">
+									{
+										profile.headline.length > 75?
+											profile.headline.slice(0, 75).trim() + "..." :
+											profile.headline
+									}
+								</p>
 							</div>
 						</div>
 					))
