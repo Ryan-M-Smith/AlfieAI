@@ -5,10 +5,11 @@
 //
 
 import { env, pipeline } from "@xenova/transformers";
+import path from "path";
 
 export async function embed(text: string) {
 	// Set up the environment to prefer local models
-	env.localModelPath = process.env.NODE_ENV === "production"? "/models/" : "public/models/";
+	env.localModelPath = path.join(process.cwd(), "/models/");
 	env.allowRemoteModels = false;
 
 	// Load the embedding pipeline with a sentence transformer model
