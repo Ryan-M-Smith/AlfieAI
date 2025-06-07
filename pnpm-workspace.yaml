@@ -4,3 +4,6 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
+
+packages:
+  - !'services'
