@@ -2,6 +2,11 @@
   "name": "alfie-ai",
   "version": "1.1.0",
   "private": true,
+  "author": {
+    "name": "Ryan Smith",
+    "email": "rysmith2113@gmail.com",
+    "url": "https://github.com/Ryan-M-Smith"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -62,7 +67,7 @@
     "postcss": "8.5.3",
     "prettier": "3.5.3",
     "tailwind-variants": "1.0.0",
-    "tailwindcss": "3.4.17",
+    "tailwindcss": "^3.4.17",
     "typescript": "5.8.3"
   }
 }
