@@ -28,7 +28,7 @@ export default function SearchResults() {
 
 		(async () => {
 			const decodedQuery = decodeURIComponent(query);
-			const response = await fetch(`/api/people/?query=${decodedQuery}`, {
+			const response = await fetch("/api/people", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -36,8 +36,8 @@ export default function SearchResults() {
 				body: JSON.stringify({ query: decodedQuery }),
 			});
 			const { results } = await response.json();
+			
 			setResults(results);
-			console.log("Search results:", results);
 			setIsLoading(false);
 		})();
 	}, [query]);
@@ -57,11 +57,9 @@ export default function SearchResults() {
 		<div className="flex flex-col justify-center items-center gap-y-8">
 			<div className="text-2xl text-center">
 				{
-					isLoading? (
-						<Spinner size="lg" label="Loading results..." aria-label="Loading results..." color="default" />
-					) : (
+					isLoading?
+						<Spinner size="lg" label="Loading results..." aria-label="Loading results..." color="default" /> :
 						<h1> {`${smartquotes(`Top results for "${query}"`)}`} </h1>
-					)
 				}
 			</div>
 
