@@ -33,6 +33,7 @@ export async function POST(request: Request) {
 	]).toArray();
 
 	const response = await fetch(`${url}/linkedin_profiles_lut.json`);
+	console.log(response.status, response);
 	const lut = JSON.parse(await response.text());
 
 	const results = personIDs.map(result => lut[result.person_id]);
