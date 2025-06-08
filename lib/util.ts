@@ -1,12 +1,10 @@
 //
-// Filename: ai.ts
-// Description: Machine learning and AI related functions
+// Filename: util.ts
+// Description: Utility functions
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
 export async function embed(text: string): Promise<any[]> {
-	console.log("Service URL", process.env.EMBEDDING_MODEL_URL);
-	
 	const response = await fetch(
 		process.env.EMBEDDING_MODEL_URL!,
 		{
@@ -19,4 +17,9 @@ export async function embed(text: string): Promise<any[]> {
 	);
 	const json = await response.json();
 	return json.embeddings;
+}
+
+export async function fetchLUT(): Promise<Record<string, any>> {
+	const response = await fetch(process.env.PROFILE_LUT_URL!);
+	return await response.json();
 }
