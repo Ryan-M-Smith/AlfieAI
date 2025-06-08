@@ -7,15 +7,11 @@
 import { NextResponse } from "next/server"
 
 import clientPromise from "@/lib/mongodb"
-import { embed } from "@/lib/ai"
+import { embed, fetchLUT } from "@/lib/util"
 
 export async function POST(request: Request) {
-	const url = process.env.NODE_ENV === "development"? process.env.LOCALHOST : process.env.PUBLIC;
-
   	const { query } = await request.json();
 	const queryEmbedding = await embed(query);
-
-	console.log("Query embedding:", queryEmbedding);
 
 	const client = await clientPromise;
 	const db = client.db("VectorDB");
@@ -32,10 +28,7 @@ export async function POST(request: Request) {
 		}
 	]).toArray();
 
-	const response = await fetch(`${url}/linkedin_profiles_lut.json`);
-	console.log(response.status, response);
-	const lut = JSON.parse(await response.text());
-
+	const lut = await fetchLUT();
 	const results = personIDs.map(result => lut[result.person_id]);
 
   	return NextResponse.json({ results });
