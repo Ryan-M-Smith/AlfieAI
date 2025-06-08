@@ -5,6 +5,8 @@
 //
 
 export async function embed(text: string): Promise<any[]> {
+	console.log("Service URL", process.env.EMBEDDING_MODEL_URL);
+	
 	const response = await fetch(
 		process.env.EMBEDDING_MODEL_URL!,
 		{

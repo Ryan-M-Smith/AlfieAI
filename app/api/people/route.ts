@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   	const { query } = await request.json();
 	const queryEmbedding = await embed(query);
 
+	console.log("Query embedding:", queryEmbedding);
+
 	const client = await clientPromise;
 	const db = client.db("VectorDB");
 	const collection = db.collection("linkedinData");
