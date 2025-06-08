@@ -29,7 +29,9 @@ export async function POST(request: Request) {
 	]).toArray();
 
 	const lut = await fetchLUT();
+	console.log(lut);
 	const results = personIDs.map(result => lut[result.person_id]);
+	console.log(results);
 
   	return NextResponse.json({ results });
 }
