@@ -9,6 +9,11 @@ import { JSX } from "react";
 
 import SearchBox from "@/components/search-box";
 
+export const metadata = {
+	title: "AlfieAI People",
+	description: "AlfieAI's LinkedIn semantic people search for Juniata"
+};
+
 export default function People(): JSX.Element {
 	return (
 		<div className="h-screen">
