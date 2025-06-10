@@ -10,7 +10,7 @@ import { Button } from "@heroui/button";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
-import { Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback, useEffect, useState } from "react";
+import { Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@heroui/input";
@@ -168,9 +168,12 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 		router.push(`/people/search?query=${encodedQuery}`);
 	}
 
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 	return (
 		<Textarea
-			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0"
+			ref={textareaRef}
+			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0 cursor-text"
 			placeholder={placeholder}
 			startContent={<IoSearch size={20}/>}
 
@@ -197,6 +200,8 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 				</>
 			}
 
+			onClick={() => textareaRef.current?.focus()}
+
 			onValueChange={(value: string) => {
 				setQuery(value);
 				setCanSend(value.length > 0);
@@ -206,7 +211,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 					setIsCleared(true);
 				}
 			}}
-			
+
 			onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
 				if (event.key === "Enter") {
 					event.preventDefault();
