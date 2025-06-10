@@ -149,6 +149,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 			startContent={<FaArrowCircleUp size={30}/>} 
 			onPress={sendQuery}
 			isIconOnly
+			isDisabled={!canSend}
 		/>
 	);
 
@@ -160,12 +161,20 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 			return;
 		}
 
+		if (query === "") {
+			router.push("/people");
+		}
+
 		if (setIsSearching) {
 			setIsSearching(true);
+			setIsCleared(true);
 		}
 
 		const encodedQuery = encodeURIComponent(query);
 		router.push(`/people/search?query=${encodedQuery}`);
+
+		setQuery("");
+		setCanSend(false);
 	}
 
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -176,6 +185,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0 sm:cursor-pointer cursor-text"
 			placeholder={placeholder}
 			startContent={<IoSearch size={20}/>}
+			value={query}
 
 			endContent={
 				<>
@@ -216,6 +226,8 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 				if (event.key === "Enter") {
 					event.preventDefault();
 					sendQuery();
+					setPlaceholder("");
+					setIsCleared(true);
 				}
 			}}
 		/>
