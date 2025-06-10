@@ -1,5 +1,5 @@
 //
-// Filename: page.tsx
+// Filename: search-box.tsx
 // Describtion: The search box for the people site
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
@@ -34,7 +34,8 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	 * Reset GSAP animations when the document visibility changes to avoid rendering issues
 	 */
 	const onChangeVisibility = useCallback(() => {
-		if (document.visibilityState !== "visible") {
+		if (document.visibilityState == "visible") {
+			gsap.killTweensOf("*");         // Kill all tweens to prevent lingering animations
 			setPlaceholder("");				// Clear the placeholder text
 			setIsCleared(true); 			// Set the cleared state to true
 			gsap.globalTimeline.clear(); 	// Pause all GSAP animations
