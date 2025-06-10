@@ -9,10 +9,9 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "node run embed-lut && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix",
-    "embed-lut": "node scripts/embed-lut.js"
   },
   "dependencies": {
     "@google/genai": "^0.12.0",
