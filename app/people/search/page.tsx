@@ -7,6 +7,20 @@
 import { Suspense } from "react";
 import { BsAsterisk } from "react-icons/bs";
 import SearchResults from "@/components/search-results";
+import { type Metadata } from "next";
+
+interface SearchParams {
+	searchParams: Promise<{ query?: string }>;
+};
+
+export async function generateMetadata({ searchParams }: SearchParams): Promise<Metadata> {
+	const query = (await searchParams).query || "";
+
+	return {
+		title: query? "Search | AlfieAI People" : "AlfieAI People",
+   		description: query? `Results for "${query}" | AlfieAI People` : "Results | AlfieAI People",
+  	};
+}
 
 export default function Search() {
 	return (
