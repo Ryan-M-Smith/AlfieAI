@@ -4,6 +4,9 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
+import { Document } from "mongodb";
+import { remove as removeDiacritics } from "diacritics"; // npm install diacritics
+
 export async function embed(text: string): Promise<any[]> {
 	const response = await fetch(
 		process.env.EMBEDDING_MODEL_URL!,
@@ -19,7 +22,9 @@ export async function embed(text: string): Promise<any[]> {
 	return json.embeddings;
 }
 
-export async function fetchLUT(): Promise<Record<string, any>> {
-	const response = await fetch(process.env.PROFILE_LUT_URL!);
-	return await response.json();
+export function uniqueKey(document: Document) {
+	const normalize = (str: string) =>
+		removeDiacritics(str).toLowerCase().replace(/\s+/g, "");
+	
+	return normalize(document.name || "") + "|" + normalize(document.headline || "");
 }
