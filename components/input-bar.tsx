@@ -8,8 +8,9 @@
 
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { IoIosSend } from "react-icons/io";
-import { JSX, KeyboardEvent, useState } from "react";
+import { IoIosSearch, IoIosSend } from "react-icons/io";
+import { JSX, KeyboardEvent, useEffect, useState } from "react";
+import Link from "next/link";
 
 interface InputBarProps {
 	className?: string;
@@ -19,6 +20,18 @@ interface InputBarProps {
 export default function InputBar({ className, onSubmit }: InputBarProps): JSX.Element {
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
+	const [collapseButton, setCollapseButton] = useState<boolean>(false);
+	
+	useEffect(() => {
+		const updateCollapse = () => {
+			setCollapseButton(window.innerWidth < 640);
+		};
+
+		updateCollapse(); // run once on mount
+		window.addEventListener("resize", updateCollapse);
+
+		return () => window.removeEventListener("resize", updateCollapse);
+	}, []);
 
 	const sendQuery = () => {
 		onSubmit(query);
@@ -47,7 +60,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 			<div className="absolute inset-x-0 h-[150px] dark:bg-default-50 bg-blue-200 z-0"/>
 	
 			{/* Input wrapper */}
-			<div className="flex justify-center w-full relative z-10 pt-7">
+			<div className="flex gap-2 justify-center w-full relative z-10 pt-7">
 				<div className="w-full shadow-lg dark:shadow-blue-300 shadow-gray-700 rounded-full">
 					<Input
 						className="opacity-50"
@@ -71,6 +84,22 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 							}
 						}}
 					/>
+				</div>
+
+				<div className="shadow-lg dark:shadow-blue-300 shadow-gray-700 rounded-full">
+					<Link href="/people">
+						<Button
+							className="opacity-75"
+							color="default"
+							variant="faded"
+							size="lg"
+							radius="full"
+							endContent={<IoIosSearch size={25}/>}
+							isIconOnly={collapseButton}
+						>
+							<span className="hidden sm:inline">People Search</span>
+						</Button>
+					</Link>
 				</div>
 			</div>
 		</div>
