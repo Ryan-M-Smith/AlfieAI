@@ -173,7 +173,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	return (
 		<Textarea
 			ref={textareaRef}
-			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0 cursor-text"
+			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0 sm:cursor-pointer cursor-text"
 			placeholder={placeholder}
 			startContent={<IoSearch size={20}/>}
 

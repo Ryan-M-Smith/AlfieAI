@@ -75,7 +75,7 @@ export default function SearchResults() {
 								<h2 className="text-xl font-bold">
 									<span className="flex gap-x-2 justify-start items-center">
 										{profile.name}
-										<Link href={profile.url} target="_blank" rel="noopener noreferrer">
+										<Link className="cursor-pointer" href={profile.url} target="_blank" rel="noopener noreferrer">
 											<FaLinkedin size={20} className="text-gray-600 hover:text-blue-700" />
 										</Link>
 									</span>
