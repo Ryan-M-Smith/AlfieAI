@@ -8,16 +8,18 @@ import { fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 
-export const metadata: Metadata = {
-	title: {
-		default: siteConfig.name,
-		template: `%s - ${siteConfig.name}`,
-	},
-	description: siteConfig.description,
-	icons: {
-		icon: "/favicon.ico",
-	},
-};
+export function generateMetadata(): Metadata {
+	return {
+		title: {
+			default: siteConfig.name,
+			template: `%s | ${siteConfig.name}`,
+		},
+		description: siteConfig.description,
+		icons: {
+			icon: "/favicon.ico",
+		},
+	};
+}
 
 export const viewport: Viewport = {
 	themeColor: [
