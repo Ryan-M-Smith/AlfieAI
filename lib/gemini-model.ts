@@ -22,7 +22,7 @@ const context = {
 };
   
 const modelConfig: GenerateContentConfig = {
-	temperature: 1,
+	temperature: 0.5,
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
@@ -68,7 +68,6 @@ export async function generate(query: string) {
 			const response = await chat.sendMessageStream({
 				message: query
 			});
-
 		
 			for await (const chunk of response) {
 				if (!chunk.text) {
