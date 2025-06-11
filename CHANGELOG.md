@@ -23,6 +23,8 @@
 
 * The AlfieAI People semantic search tool is now live! Check it out at [https://alfieai.fyi/people](https://alfieai.fyi/people).
 * Fixed an issue with scroll bars showing on the chat page
+* Added individual page titles and metadata
+* Added customized metadata for search result pages
 
 ## v2.0.1 - 6/10/25
 
