@@ -6,12 +6,25 @@
 
 ## v1.1.0 - 4/29/25
 
-* Include chat history and context
-* Make responses sound more human-like and accessible
-* Adjusted the model's context window
-* Fix the corrupted favicon
+* Chat sessions now incorporate chat history and context
+* Responses now sound more human-like and accessible
+  * AlfieAI now prefers using bulleted lists to paragraphs
+  * Markdown editing is now preferred
+* Adjusted the model's context window to give more targeted responses
+* Fixed the corrupted favicon
 
 ## v1.2.0 - 5/2/25
 
-* Stream responses from the server rather than displaying them after the fact
-* Descrease response time
+* Responses now stream directly from the server rather than displaying them after the fact
+* Content "generates in" rather than appearing
+* Chat response time reduced
+
+## v2.0.0 - 6/9/25
+
+* The AlfieAI People semantic search tool is now live! Check it out at [https://alfieai.fyi/people](https://alfieai.fyi/people).
+* Fixed an issue with scroll bars showing on the chat page
+
+## v2.0.1 - 6/10/25
+
+* Fixed a bug causing generation to stop partway through
+* Added some minor speedups to the chat response time
