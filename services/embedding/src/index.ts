@@ -42,7 +42,7 @@ app.post("/embed", async (req: express.Request, res: express.Response) => {
 });
 
 app.get("/ping", (_req: express.Request, res: express.Response) => {
-	res.send("Recevied!");
+	res.json({ ok: true, message: "Received!" });
 });
 
 const PORT = process.env.PORT? parseInt(process.env.PORT) : 3000;
