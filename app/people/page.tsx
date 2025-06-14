@@ -8,6 +8,8 @@ import { BsAsterisk } from "react-icons/bs";
 import { JSX } from "react";
 
 import SearchBox from "@/components/search-box";
+import Navbar from "@/components/navbar";
+import Link from "next/link";
 
 export const metadata = {
 	title: "AlfieAI People",
@@ -16,16 +18,32 @@ export const metadata = {
 
 export default function People(): JSX.Element {
 	return (
-		<div className="h-screen">
-			<main className="flex justify-center items-center h-screen px-4 sm:px-0">
+		<div className="h-screen flex flex-col">
+			<Navbar />
+			<main className="flex-1 flex justify-center items-center px-4 sm:px-0">
 				<div className="flex flex-col gap-y-10 w-full">
-					<h1 className="text-4xl sm:text-7xl flex justify-center items-center text-center">
-						<span className="flex flex-row justify-center items-center gap-2 sm:gap-5">
-							<span>AlfieAI</span>
-							<BsAsterisk className="sm:size-1 lg:size-10"/>
-							<span className="font-serif">People</span>
+					<div className="flex flex-col gap-y-4">
+						<h1 className="text-5xl sm:text-7xl flex justify-center items-center text-center">
+							<span className="flex flex-row justify-center items-center gap-2 sm:gap-3">
+								<span>AlfieAI</span>
+								<BsAsterisk className="sm:size-1 lg:size-10"/>
+								<span className="font-serif">People</span>
+							</span>
+						</h1>
+
+						<span className="flex flex-row justify-center gap-x-1 text-xs text-default-500 italic pointer-events-none">
+							<p className="whitespace-nowrap">LinkedIn semantic search, powered by AlfieAI. Data from</p>
+							<Link
+								className="underline pointer-events-auto whitespace-nowrap"
+								href="https://mixrank.com"
+								rel="noopener noreferrer"
+								target="_blank"
+								passHref
+							>
+								MixRank.
+							</Link>
 						</span>
-					</h1>
+					</div>
 
 					<SearchBox/>
 				</div>
