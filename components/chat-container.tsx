@@ -6,7 +6,7 @@
 
 import { JSX, ReactElement } from "react";
 
-import ChatBubble from "./chat-bubble";
+import ChatBubble from "@/components/message";
 
 interface ChatContainerProps {
 	className?: string;
@@ -17,8 +17,8 @@ export default function ChatContainer({ className, children }: ChatContainerProp
 	return (
 		<div
 			className={`
-				${className} bg-transparent flex flex-col items-center overflow-y-auto overscroll-none
-				sm:items-start px-4 sm:px-6 md:px-8 snap-end
+				${className} bg-transparent flex flex-col justify-center items-center
+				sm:items-start lg:w-3/4 sm:w-full mx-auto px-4 sm:px-6 md:px-8 snap-end
 			`}
 		>
 			{children}
