@@ -85,7 +85,6 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 					endContent={ <SendButton/> }
 
 					onValueChange={ (value: string) => {
-						console.log("Input value changed:", value);
 						setQuery(value);
 						setCanSend(value.length > 0);
 					}}
