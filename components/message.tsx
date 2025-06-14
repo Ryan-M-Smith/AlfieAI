@@ -7,15 +7,15 @@
 import { JSX, ReactNode } from "react";
 import { Spinner } from "@heroui/spinner";
 
-interface ChatBubbleProps {
+interface MessageProps {
 	className?: string;
 	children?: 	ReactNode;
 	role?: 		"user" | "model";
 	isLoading?: boolean;
-	isFirst?: boolean;
+	isFirst?: 	boolean;
 }
 
-export default function Message({ className, children, role, isLoading, isFirst = false }: ChatBubbleProps): JSX.Element {
+export default function Message({ className, children, role, isLoading, isFirst = false }: MessageProps): JSX.Element {
 	const User = ({ children }: { children: ReactNode }) => {
 		return (
 			<div className={`${className} flex flex-col w-full justify-end px-2 sm:px-4 mt-4 mb-1`} role="user">

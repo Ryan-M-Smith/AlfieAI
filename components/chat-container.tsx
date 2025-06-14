@@ -6,11 +6,11 @@
 
 import { JSX, ReactElement } from "react";
 
-import ChatBubble from "@/components/message";
+import Message from "@/components/message";
 
 interface ChatContainerProps {
 	className?: string;
-	children: ReactElement<typeof ChatBubble>[];
+	children: ReactElement<typeof Message>[];
 }
 
 export default function ChatContainer({ className, children }: ChatContainerProps): JSX.Element {
