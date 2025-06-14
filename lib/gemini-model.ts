@@ -9,7 +9,7 @@ import {
 	HarmBlockThreshold, HarmCategory, SafetySetting
 } from "@google/genai";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const modelID = "gemini-2.5-flash-preview-05-20";
 
