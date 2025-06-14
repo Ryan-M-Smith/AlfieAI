@@ -17,7 +17,7 @@ const context = {
 	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
 			Juniata College. Make sure to be as accurate as possible and use the internet
 			if you can't find relevant or correct answers. Render responses in markdown, with
-			headings, bullet points and lists when possible.`,
+			headings, bullet points and lists when possible. Prefer listing information when you can.`,
 };
   
 const modelConfig: GenerateContentConfig = {
