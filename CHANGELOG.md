@@ -2,24 +2,26 @@
 
 ## v1.0.0 - 4/23/25
 
-* Initial release of AlfieAI
+* Initial release of the AlfieAI Chat
 
 ## v1.1.0 - 4/29/25
 
-* Chat sessions now incorporate chat history and context
+* Sessions now incorporate chat history and context, meaning AlfieAI can remember what you talked
+  about and continue a conversation with you
 
 * Responses now sound more human-like and accessible
   * AlfieAI now prefers using bulleted lists to paragraphs
-  * Markdown editing is now preferred
+  * Markdown rendering is now supported
 
-* Adjusted the model's context window to give more targeted responses
+* The model's context window has been adjusted to provide more targeted responses
 * Fixed the corrupted favicon
 
 ## v1.2.0 - 5/2/25
 
-* Responses now stream directly from the server rather than displaying them after the fact
-* Content "generates in" rather than appearing
-* Chat response time reduced
+* Responses now render in chunks directly from the server as they're received rather than displaying all at once
+  after they're fully received after the fact
+* Content "generates in" with a typewriter effect rather than just appearing
+* Chat response time has been reduced
 
 ## v2.0.0 - 6/9/25
 
@@ -32,14 +34,20 @@
 
 * Fixed a bug causing generation to stop partway through
 * Added some minor speedups to the chat response time
+* Increased the `/api/query` route timeout to 15 seconds
 
 ## v3.0.0 - 6/14/25
 
 * AlfieAI has a new UI!
-  * The chat page has been overhauled. Answers are now front and center, as well as a bigger
-    prompt box
-  * There's now a navbar that allows you to switch between site features
+  * The entire website has been overhauled, and I think it finally feels "legit" now
+  * Users can switch between AI tools in the top left on the navbar dropdown
   * The logo in the top right links back to the chat
+  * The navbar also contains a link to the AlfieAI GitHub repo
+  * The invisible barrier that hides scrolling chats behind the prompt box now has a glassmorphic
+    blur effect on it, just for fun
+  * Message bubbles have become cleaner, rounder, and more abstract
+  * Dividers are displayed between message exchanges
+  * Prompt boxes autofocus on mount, which makes things more convenient (especially on mobile)
 
 * AlfieAI Chat
   * While there was never really a formal name for AlfieAI's "home" page, it's effectively going
@@ -50,17 +58,23 @@
     Gemini API itself (it's not fast, and raw responses from Google can take upwards of 8 seconds alone)
     and the Vercel server (I have 1 GB of RAM for the server, but having more would allow for potentially
     faster response times).
+  * The send button now mirrors that of the people search
   * The chat UI has transitioned from a text-message style to a more professional style
   * Model responses now take up the full chat container and have more advanced Markdown styling. AlfieAI can now
     render:
-    * Numbered lists
+    * Numbered lists (via `tailwind-topography`)
     * Tables (via `remark-gfm`)
     * Links (via `remark-gfm`)
-    * Code (not thoroughly tested, but it _is_ possible and I _have_ seen AlfieAI do it)
+    * Code (via `tailwind-topography`; not thoroughly tested, but it _is_ possible and I _have_ seen AlfieAI do it)
     * Footnotes (via `remark-gfm`)
     * Strikethrough (via `remark-gfm`)
-    * Tables (via `remark-gfm`)
-    * Tasklists (via `remark-gfm`)
+    * Tables (via `remark-gfm`; when it tries to generate larger ones it struggles)
+    * Checklists (via `remark-gfm`)
+  * Increased the `/api/query` route timeout to 30 seconds, just to be safe
+  * Users can now follow external links from the chat. They are prompted to confirm before following the link in a new tab
+  * The chat container now auto-scrolls as AlfieAI generates content
+  * When scrolling through conversation history, a "jump to bottom" button appears
+  * The send button now correctly disables when the prompt box is empty
 
 * AlfieAI People
   * The search button is now easier to click and the icon shouldn't prevent clicks anymore
@@ -69,9 +83,16 @@
   * The search box no longer clears immediately after entering the search. Depending on the internet
     speed, the search box could clear before the results page loaded.
   * The search results no longer randomly fail to load
-  * The embedding microservice is now kept alive with a Google Cloud Scheduler `cron` job that pings the server
-    every 10 minutes. I could configure the microservice to never scale down during downtime, but that would increase
-    my server costs tremendously. Cloud Scheduler is bascially always free as ling as you're below the job threshold.
   * The acknowledgement is now displayed under the logo instead of on the search box
   * The logo styling is now more consistent between the search page and the results page
   * The logo shows up larger on mobile
+
+* Models
+  * I continue to tweak the parameters of the AlfieAI model to give users the best possible experience. The
+    provided context has been tweaked slightly and the model temperature has been raised, making AlfieAI think
+    deeper and respond more creatively. Accuracy is of course always a goal, but factual responses presented in
+    a more human-like way is the dream.
+  * The embedding microservice is now kept alive with a Google Cloud Scheduler `cron` job that pings the server
+    every 10 minutes. I could configure the microservice to never scale down during downtime, but that would increase
+    my server costs tremendously. Cloud Scheduler is bascially always free as ling as you're below the job threshold.
+  * The semantic search index has been redesigned to be smaller, more accurate, and not return duplicates
