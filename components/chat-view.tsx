@@ -28,104 +28,41 @@ export default function ChatView(): JSX.Element {
 	const [response, setResponse] = useState<string>("");
 	const [messages, setMessages] = useState<MessageData[]>([]);
 	const [autoScroll, setAutoScroll] = useState<boolean>(true);
+	const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
 	const divRef = useRef<HTMLDivElement>(null);
 
-	// Track last manual scroll time
-	const lastManualScrollRef = useRef<number>(0);
-	const isManualScrollingRef = useRef<boolean>(false);
-	const forceScrollRef = useRef<boolean>(false);
-	
-	// Scroll handling with adaptive threshold detection
+	// Scroll to top of last user message when a new prompt is added
 	useEffect(() => {
-		if (!divRef.current) {
-			return;
-		}
-
+		if (!messages.length || !divRef.current) return;
 		const el = divRef.current;
-		
-		// Always scroll to bottom when messages change if autoScroll is true
-		// or if we just added a new message (indicated by forceScrollRef)
-		if (autoScroll || forceScrollRef.current) {
-			// Reset the force scroll flag
-			if (forceScrollRef.current) {
-				forceScrollRef.current = false;
-			}
-			
-			// Use smooth scrolling for better UX
-			setTimeout(() => {
-				if (el) {
-					el.scrollTo({ 
-						top: el.scrollHeight, 
-						behavior: "smooth" 
-					});
-				}
-			}, 50); // Small delay to ensure content has rendered
-			
-			return;
-		}
-		
-		// For manual scrolling situations:
-		// Calculate adaptive threshold based on container size
-		const scrollableHeight = el.scrollHeight - el.clientHeight;
-		const adaptiveThreshold = Math.min(
-			Math.max(scrollableHeight * 0.15, 60), 	// 15% of scrollable area, minimum 60px
-			300 									// Cap at 300px for larger chats
-		);
-		
-		// Only auto-scroll if we're near the bottom and not actively scrolling
-		const isNearBottom = el.scrollHeight - el.clientHeight - el.scrollTop < adaptiveThreshold;
-		const timeSinceLastScroll = Date.now() - lastManualScrollRef.current;
-		
-		if (isNearBottom && timeSinceLastScroll > 100) {
-			el.scrollTo({ 
-				top: el.scrollHeight, 
-				behavior: "smooth" 
-			});
-		}
-	}, [messages, autoScroll]);
+		const userMessages = el.querySelectorAll("[role='user']");
+		const lastUserEl = userMessages[userMessages.length - 1];
 
-	// Add scroll listener to detect when user manually scrolls
+		if (lastUserEl && messages[messages.length - 1].isLoading) {
+			const containerRect = el.getBoundingClientRect();
+			const messageRect = lastUserEl.getBoundingClientRect();
+			console.log(messageRect.top, containerRect.top, el.scrollTop);
+			const offset = messageRect.top - containerRect.top + el.scrollTop - 40; // 40px padding from top
+			el.scrollTo({ top: offset, behavior: "smooth" });
+		}
+	}, [messages]);
+
+	// Track user scroll position to show/hide scroll-to-bottom button
 	useEffect(() => {
-		if (!divRef.current) {
+		const el = divRef.current;
+
+		if (!el) {
 			return;
 		}
 
-		const element = divRef.current;
-		
-		// Use an adaptive threshold based on container height
 		const handleScroll = () => {
-			// Only treat this as a manual scroll if we're not auto-scrolling
-			// This prevents scroll events triggered by our auto-scroll from being detected as manual scrolls
-			if (!forceScrollRef.current) {
-				// Record manual scroll time and set active scrolling flag
-				lastManualScrollRef.current = Date.now();
-				isManualScrollingRef.current = true;
-				
-				// Calculate adaptive threshold based on container size
-				const scrollableHeight = element.scrollHeight - element.clientHeight;
-				const adaptiveThreshold = Math.min(
-					Math.max(scrollableHeight * 0.15, 60), // 15% of scrollable area, minimum 60px 
-					300 // Cap at 300px for larger chats
-				);
-				
-				// Check if user is at the bottom
-				const isAtBottom = element.scrollHeight - element.clientHeight - element.scrollTop < adaptiveThreshold;
-				
-				// Only update autoScroll state if it needs to change
-				if (autoScroll !== isAtBottom) {
-					setAutoScroll(isAtBottom);
-				}
-				
-				// Reset scrolling flag after a short delay
-				setTimeout(() => {
-					isManualScrollingRef.current = false;
-				}, 300);
-			}
+			const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+			setAutoScroll(nearBottom);
 		};
-		
-		element.addEventListener("scroll", handleScroll);
-		return () => element.removeEventListener("scroll", handleScroll);
+		el.addEventListener("scroll", handleScroll);
+
+		return () => el.removeEventListener("scroll", handleScroll);
 	}, []);
 
 	// Post a message and wait for a response
@@ -134,40 +71,26 @@ export default function ChatView(): JSX.Element {
 			return;
 		}
 
-		// Create a message for the user's query
-		const userQuery = {
-			content: query,
-			isLoading: false
-		} satisfies MessageData;
+		const userQuery: MessageData = { content: query, isLoading: false };
+		const modelResponse: MessageData = { content: null, isLoading: true };
 
-		// Create a message for the model's response
-		const modelResponse = {
-			content: null,
-			isLoading: true
-		} satisfies MessageData;
-
-		// Set force scroll flag to ensure we scroll down on new message
-		forceScrollRef.current = true;
 		setMessages(prev => [...prev, userQuery, modelResponse]);
+		setAutoScroll(true);
+		setResponse("");
 
-		// Prompt the model for a response
 		(async () => {
-			setResponse("");
-
 			const response = await fetch("/api/query", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({
-					query: query
-				})
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ query })
 			});
 
 			const reader = response.body?.getReader();
 			const decoder = new TextDecoder("utf-8");
 
 			while (true) {
+				setIsGenerating(true);
+
 				if (!reader) {
 					continue;
 				}
@@ -181,118 +104,132 @@ export default function ChatView(): JSX.Element {
 				const text = decoder.decode(value);
 				setResponse(prev => prev + text);
 			}
+
+			setIsGenerating(false);
 		})();
 	}, [query]);
 
-	// Update the message list with the model's response
+	// Update the last message with the model's streamed response
 	useEffect(() => {
-		if (!response || response.length < 1) {
-			return;
-		}
-
-		// Update the loading message incrementally with the response chunks
+		if (!response || response.length < 1) return;
 		const newMessages = [...messages];
 		newMessages[newMessages.length - 1] = {
 			content: (
 				<div className="flex justify-center items-center w-full mt-1">
 					<span className={`
-						prose prose-headings:text-default-foreground prose-li:marker:text-default-foreground
-						prose-strong:text-default-foreground prose-strong:font-bold text-default-foreground
-
-						prose-p:my-0.5 prose-p:leading-snug
-						prose-li:my-0.5 prose-ul:leading-none prose-li:leading-snug
-						prose-ul:pl-5 prose-li:pl-0 prose-ul:list-disc prose-a:text-primary-500
-
-						prose-headings:leading-none prose-code:font-mono
+						prose text-default-foreground prose-p:my-0.5 prose-p:leading-snug prose-li:my-0.5
+						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5 prose-li:pl-0
+						prose-ul:list-disc rose-a:text-primary-500 prose-headings:text-default-foreground
+						prose-strong:text-default-foreground prose-strong:font-bold prose-headings:leading-none
+						prose-code:font-mono prose-li:marker:text-default-foreground
 					`}>
 						<Markdown
 							remarkPlugins={[remarkGfm]}
 							components={{
-								a: ({ node, ...props }) => (
-									<a
-										{...props}
-										href={props.href}
-										rel="noopener noreferrer"
-										onClick={(event) => {
-											event.preventDefault();
-											const canOpen = window.confirm(
-												`Are you sure you want to open this link in a new tab?\n\n${props.href}`
-											);
-											if (canOpen) {
-												window.open(props.href, "_blank", "noopener,noreferrer");
-											}
-										}}
-									>
+								a: ({ ...props }) => (
+									<a {...props} href={props.href} rel="noopener noreferrer" onClick={(e) => {
+										e.preventDefault();
+										if (window.confirm(`Open this link? ${props.href}`)) {
+											window.open(props.href, "_blank", "noopener,noreferrer");
+										}
+									}}>
 										{props.children}
 									</a>
-								)
-							}}
-						>
-							{response}
-						</Markdown>
-					</span>
-				</div>
-			),
+							)
+						}}
+					>
+						{response}
+					</Markdown>
+				</span>
+			</div>
+		),
 			isLoading: false
-		} satisfies MessageData;
-
+		};
 		setMessages(newMessages);
 	}, [response]);
 
-	const ToBottom = () => {
-		return (
-			<Button 
-				className={`
-					absolute bottom-20 right-8 bg-primary/90 dark:bg-default-100 bg-primary text-white p-2 rounded-full
-					shadow-lg hover:bg-primary transition-colors z-20
-				`}
-				startContent={<IoIosArrowDown size={25}/>}
-				onPress={() => {
-					setAutoScroll(true);
+	// Show scroll-to-bottom button as soon as content is scrollable and user is not at the bottom
+	useEffect(() => {
+		if (!divRef.current) {
+			return;
+		}
 
-					if (divRef.current) {
-						divRef.current.scrollTo({ 
-							top: divRef.current.scrollHeight, 
-							behavior: "smooth" 
-						});
-					}
-				}}
-				isIconOnly
-			/>
-		)
-	}
+		const el = divRef.current;
+		const isScrollable = el.scrollHeight > el.clientHeight + 2; // Add a 2px buffer to account for scrollbar width
+		const isAtBottom = Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 10;
+		
+		setAutoScroll(!isScrollable || isAtBottom);
+	}, [messages]);
+
+	const scrollToBottom = () => {
+		const el = divRef.current;
+		if (!el) return;
+		el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+	};
+
+	const ToBottomButton = () => (
+		<Button
+			className="absolute bottom-10 left-0 right-0 w-fit mx-auto text-white backdrop-blur-md shadow-lg z-20 pt-1"
+			size={window.innerWidth < 640? "sm" : "md"}
+			radius="full"
+			variant="ghost"
+			startContent={<IoIosArrowDown size={30} />}
+			onPress={scrollToBottom}
+			isIconOnly
+		/>
+	)
+
+	// Determine if the model is generating (last message is loading)
+	// const isGenerating = messages.length > 0 && messages[messages.length - 1]?.isLoading;
+
+	// Determine if we should show extra bottom padding (only during generation)
+	const showExtraPadding = (
+		messages.length > 1 &&
+		messages[messages.length - 2] &&
+		!messages[messages.length - 2].isLoading &&
+		messages[messages.length - 1] &&
+		messages[messages.length - 1].isLoading
+	)
 
 	return (
 		<div className="w-full h-screen flex flex-col text-default-foreground overflow-hidden">
-			<Navbar/>
+			<Navbar />
 			<main className="flex-1 flex flex-col relative overflow-hidden">
-				{/* Chat area: scrollable between navbar and footer */}
-				<div ref={divRef} className="absolute inset-0 px-4 sm:px-8 py-4 space-y-6 overflow-y-auto">
+				<div
+					ref={divRef}
+					className={`absolute inset-0 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
+				>
 					{messages.length === 0 ? (
 						<div className="flex flex-col items-center justify-center h-full text-center text-zinc-400">
-							<Hero />
+							<Hero/>
 						</div>
 					) : (
 						<ChatContainer className="space-y-4 pb-20">
-							{ messages.map(({ content, isLoading }, i) => (
-								<Message
-									key={i}
-									role={i % 2 === 0 ? "user" : "model"}
-									isLoading={isLoading}
-									isFirst={i % 2 === 0 && i === 0} // First message and is a user message
-								>
-									{content}
-								</Message>
-							))}
+							{ messages.map(({ content, isLoading }, i) => {
+								const isUser = i % 2 === 0;
+								const isLastUser = isUser && i === messages.length - 2;
+								const nextIsLoadingModel =
+									isLastUser && messages[i + 1] && messages[i + 1].isLoading;
+
+								return (
+									<div key={i} className="w-full">
+										<Message
+											role={isUser ? "user" : "model"}
+											isLoading={isLoading}
+											isFirst={isUser && i === 0}
+										>
+											{content}
+										</Message>
+									</div>
+								);
+							})}
 						</ChatContainer>
 					)}
 				</div>
-				
-				{/* Scroll to bottom button - only shows when user has scrolled up */}
-				{ !autoScroll && messages.length > 0 && <ToBottom/> }
-			</main>
 
-			<InputBar onSubmit={setQuery}/>
+				{ !autoScroll && messages.length > 0 && <ToBottomButton/> }
+			</main>
+			<InputBar onSubmit={setQuery} />
 		</div>
 	);
 }
