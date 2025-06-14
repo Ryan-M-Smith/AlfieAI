@@ -99,3 +99,4 @@
 ## v3.0.1 - 6/14/25
 
 * Fixed an issue where the input bar got hidden behind the bottom search bar on mobile Safari
+* Replaced `role` with `data-role` on message `div`s to avoid confusing screen readers
