@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 
 import { generate } from "@/lib/gemini-model";
 
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
 	const { query } = await request.json();
