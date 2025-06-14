@@ -45,7 +45,12 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 	}, [query]);
 
 	return (
-		<div className={`${className} sticky flex justify-center items-center bottom-5 left-0 px-4 sm:px-48`}>
+		<div
+			className={
+				`${className} w-full left-0 px-4 sm:px-48 flex justify-center items-center
+				z-50 fixed bottom-0 sm:sticky sm:bottom-5 pb-[env(safe-area-inset-bottom)] sm:pb-0
+			`}
+		>
 			{/* Backdrop blocker */}
 			<div
 				className={`
