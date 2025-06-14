@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
-import { fontSans } from "@/config/fonts";
+import { fontSans, fontMono } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 
@@ -30,11 +30,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
 	return (
-		<html className="h-screen dark:bg-default-100 light:bg-gray-100 overscroll-none" lang="en" suppressHydrationWarning>
+		<html className="h-screen dark:bg-zinc-950/80 light:bg-gray-100 overscroll-none" lang="en" suppressHydrationWarning>
 			<head>
 				<meta name="google-site-verification" content="9vfCGFrG_b3GRRS8iTZ1tIYAe_Ek0OhxcQgsVKzeza8"/>
 			</head>
-			<body className={`h-screen font-sans antialiased ${fontSans.variable}`}>
+			<body className={`h-screen font-sans antialiased ${fontSans.variable} ${fontMono.variable}`}>
 				<Providers themeProps={{
 					attribute: "class",
 					defaultTheme: "system",
@@ -42,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
 					disableTransitionOnChange: true
 				}}>
 					{children}
+
 					<Analytics mode="production"/>
 					<SpeedInsights/>
 				</Providers>
