@@ -31,6 +31,10 @@ export default function ChatView(): JSX.Element {
 	const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
 	const divRef = useRef<HTMLDivElement>(null);
+	const lastManualScrollRef = useRef<number>(Date.now());
+	const isManualScrollingRef = useRef<boolean>(false);
+	const forceScrollRef = useRef<boolean>(false);
+	const scrollDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Scroll to top of last user message when a new prompt is added
 	useEffect(() => {
@@ -191,6 +195,49 @@ export default function ChatView(): JSX.Element {
 		messages[messages.length - 1].isLoading
 	)
 
+	useEffect(() => {
+		if (!divRef.current) return;
+		const element = divRef.current;
+
+		const handleScroll = () => {
+			if (!forceScrollRef.current) {
+				lastManualScrollRef.current = Date.now();
+				isManualScrollingRef.current = true;
+
+				if (scrollDebounceRef.current) {
+					clearTimeout(scrollDebounceRef.current);
+				}
+
+				scrollDebounceRef.current = setTimeout(() => {
+					const scrollDelta = Math.ceil(element.scrollHeight - element.clientHeight - element.scrollTop);
+					const isExactlyAtBottom = Math.abs(scrollDelta) < 10;
+					const scrollableHeight = element.scrollHeight - element.clientHeight;
+
+					const adaptiveThreshold = Math.min(
+						Math.max(scrollableHeight * 0.15, 60),
+						300
+					);
+
+					// Only update autoScroll if the value changes
+					if (isExactlyAtBottom && !autoScroll) {
+						setAutoScroll(true);
+					}
+					else if (!isExactlyAtBottom && autoScroll) {
+						setAutoScroll(false);
+					}
+
+					isManualScrollingRef.current = false;
+				}, 80);
+			}
+		};
+
+		element.addEventListener("scroll", handleScroll);
+		return () => element.removeEventListener("scroll", handleScroll);
+	}, [autoScroll]);
+
+	// Helper to determine if content is scrollable
+	const isScrollable = divRef.current && divRef.current.scrollHeight > divRef.current.clientHeight + 2;
+
 	return (
 		<div className="w-full h-screen flex flex-col text-default-foreground overflow-hidden">
 			<Navbar />
@@ -207,14 +254,11 @@ export default function ChatView(): JSX.Element {
 						<ChatContainer className="space-y-4 pb-20">
 							{ messages.map(({ content, isLoading }, i) => {
 								const isUser = i % 2 === 0;
-								const isLastUser = isUser && i === messages.length - 2;
-								const nextIsLoadingModel =
-									isLastUser && messages[i + 1] && messages[i + 1].isLoading;
 
 								return (
 									<div key={i} className="w-full">
 										<Message
-											role={isUser ? "user" : "model"}
+											role={isUser? "user" : "model"}
 											isLoading={isLoading}
 											isFirst={isUser && i === 0}
 										>
@@ -227,7 +271,8 @@ export default function ChatView(): JSX.Element {
 					)}
 				</div>
 
-				{ !autoScroll && messages.length > 0 && <ToBottomButton/> }
+				{/* Only show ToBottom button if content is scrollable and autoScroll is false */}
+				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton />}
 			</main>
 			<InputBar onSubmit={setQuery} />
 		</div>
