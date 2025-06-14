@@ -18,7 +18,7 @@ interface ChatBubbleProps {
 export default function Message({ className, children, role, isLoading, isFirst = false }: ChatBubbleProps): JSX.Element {
 	const User = ({ children }: { children: ReactNode }) => {
 		return (
-			<div className={`${className} flex flex-col w-full px-2 sm:px-4 mt-4 mb-1`}>
+			<div className={`${className} flex flex-col w-full justify-end px-2 sm:px-4 mt-4 mb-1`} role="user">
 				{/* Horizontal divider bar - hidden for the first message */}
 				{ !isFirst && (
 					<div className="block w-full my-6">
@@ -48,7 +48,7 @@ export default function Message({ className, children, role, isLoading, isFirst 
 
 	const Model = ({ children }: { children: ReactNode }) => {
 		return (
-			<div className="w-full px-2 sm:px-4 my-4">
+			<div className="flex w-full justify-center px-2 sm:px-4 my-4" role="model">
 				<div className="text-left text-base sm:text-lg text-zinc-100 whitespace-pre-line">
 					{isLoading ? (
 						<Spinner
