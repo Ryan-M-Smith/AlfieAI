@@ -11,7 +11,6 @@ import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
 import { Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@heroui/input";
 
@@ -48,6 +47,12 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 		return () => document.removeEventListener("visibilitychange", onChangeVisibility);
 	}, [onChangeVisibility]);
 
+	// Reset the query state on mount
+	useEffect(() => {
+		if (!canSend) {
+			setQuery("");
+		}
+	}, [canSend]);
 
 	// Animate the placeholder text for the search box
 	useEffect(() => {
@@ -143,10 +148,10 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	 */
 	const SearchButton = () => (
 		<Button
-			className="relative right-0 sm:right-auto sm:top-0"
+			className="relative right-0 sm:right-auto sm:top-0 pointer-events-auto"
 			variant="light"
 			radius="full"
-			startContent={<FaArrowCircleUp size={30}/>} 
+			startContent={<FaArrowCircleUp className="-z-5" size={30}/>} 
 			onPress={sendQuery}
 			isIconOnly
 			isDisabled={!canSend}
@@ -173,63 +178,42 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 		const encodedQuery = encodeURIComponent(query);
 		router.push(`/people/search?query=${encodedQuery}`);
 
-		setQuery("");
 		setCanSend(false);
 	}
 
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	return (
-		<Textarea
-			ref={textareaRef}
-			className="flex justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-4 sm:px-0 sm:cursor-pointer cursor-text"
-			placeholder={placeholder}
-			startContent={<IoSearch size={20}/>}
-			value={query}
+		<div onClick={ () => textareaRef.current?.focus() } className="w-full px-2 sm:px-0">
+			<Textarea
+				className="flex flex-col sm:flex-row justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-0 sm:px-0 cursor-text"
+				ref={textareaRef}
+				variant="faded"
+				placeholder={placeholder}
+				startContent={ <IoSearch size={20}/> }
+				value={query}
+				endContent={ <SearchButton/> }
+				autoFocus
 
-			endContent={
-				<>
-					<div className="hidden sm:flex md:absolute md:bottom-1 sm:right-0 flex-col sm:flex-row justify-between w-full px-2">
-						<span className="flex gap-x-1 text-xs text-default-500 italic md:mt-4">
-							<p>LinkedIn semantic search, powered by AlfieAI. Data from</p>
-							<Link
-								className="underline"
-								href="https://mixrank.com"
-								rel="noopener noreferrer"
-								target="_blank"
-								passHref
-							>
-								MixRank.
-							</Link>
-						</span>
-						<SearchButton/>
-					</div>
-					<div className="sm:hidden">
-						<SearchButton/>
-					</div>
-				</>
-			}
+				onValueChange={ (value: string) => {
+					setQuery(value);
+					setCanSend(value.length > 0);
 
-			onClick={() => textareaRef.current?.focus()}
+					if (value.length === 0) {
+						setPlaceholder("");
+						setIsCleared(true);
+					}
+				}}
 
-			onValueChange={(value: string) => {
-				setQuery(value);
-				setCanSend(value.length > 0);
-
-				if (value.length === 0) {
-					setPlaceholder("");
-					setIsCleared(true);
-				}
-			}}
-
-			onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-				if (event.key === "Enter") {
-					event.preventDefault();
-					sendQuery();
-					setPlaceholder("");
-					setIsCleared(true);
-				}
-			}}
-		/>
+				onKeyDown={ (event: KeyboardEvent<HTMLInputElement>) => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						sendQuery();
+						setPlaceholder("");
+						setIsCleared(true);
+					}
+				}}
+			/>
+		</div>
 	);
 }
