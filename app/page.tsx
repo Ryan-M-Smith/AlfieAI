@@ -4,7 +4,7 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
-import ChatClient from "@/components/chat-view";
+import ChatView from "@/components/chat-view";
 
 export const metadata = {
 	title: "Chat | AlfieAI",
@@ -12,5 +12,5 @@ export const metadata = {
 };
 
 export default function Chat() {
-	return <ChatClient/>;
+	return <ChatView/>;
 }
