@@ -71,7 +71,7 @@
     * Checklists (via `remark-gfm`)
   * Increased the `/api/query` route timeout to 30 seconds, just to be safe
   * Users can now follow external links from the chat. They are prompted to confirm before following the link in a new tab
-  * The chat container now auto-scrolls as AlfieAI generates content
+  * The chat container now auto-scrolls new prompts to the top of the screen and leaves space as AlfieAI generates content
   * When scrolling through conversation history, a "jump to bottom" button appears
   * The send button now correctly disables when the prompt box is empty
 
