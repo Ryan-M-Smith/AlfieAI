@@ -66,6 +66,14 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 						textareaRef.current?.focus();
 					}
 				}}
+				role="button"
+				tabIndex={0}
+				aria-label="Focus text input"
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						textareaRef.current?.focus();
+					}
+				}}
 			>
 				<Textarea
 					ref={textareaRef}
@@ -75,7 +83,6 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 					placeholder="Enter a prompt..."
 					value={query}
 					endContent={ <SendButton/> }
-					autoFocus
 
 					onValueChange={ (value: string) => {
 						console.log("Input value changed:", value);

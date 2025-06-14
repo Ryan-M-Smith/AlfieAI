@@ -184,7 +184,18 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	return (
-		<div onClick={ () => textareaRef.current?.focus() } className="w-full px-2 sm:px-0">
+		<div 
+			onClick={ () => textareaRef.current?.focus() } 
+			className="w-full px-2 sm:px-0"
+			role="button"
+			tabIndex={0}
+			aria-label="Focus search input"
+			onKeyDown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					textareaRef.current?.focus();
+				}
+			}}
+		>
 			<Textarea
 				className="flex flex-col sm:flex-row justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-0 sm:px-0 cursor-text"
 				ref={textareaRef}
@@ -193,7 +204,6 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 				startContent={ <IoSearch size={20}/> }
 				value={query}
 				endContent={ <SearchButton/> }
-				autoFocus
 
 				onValueChange={ (value: string) => {
 					setQuery(value);
