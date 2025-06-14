@@ -52,10 +52,10 @@ export default function Message({ className, children, role, isLoading, isFirst 
 				<div className="text-left text-base sm:text-lg text-zinc-100 whitespace-pre-line">
 					{isLoading ? (
 						<Spinner
-						className="flex justify-start items-center"
-						label="AlfieAI is thinking"
-						color="primary"
-						variant="gradient"
+							className="flex justify-start items-center"
+							label="AlfieAI is thinking"
+							color="primary"
+							variant="gradient"
 						/>
 					) : children}
 				</div>
