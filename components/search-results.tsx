@@ -12,6 +12,7 @@ import { Spinner } from "@heroui/spinner";
 import smartquotes from "smartquotes-ts";
 import { FaLinkedin } from "react-icons/fa";
 import Link from "next/link";
+
 import SearchBox from "@/components/search-box";
 
 export default function SearchResults() {
@@ -67,7 +68,7 @@ export default function SearchResults() {
 				<SearchBox setIsSearching={setIsLoading}/>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-4/5 px-4 pb-5">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-4/5 px-4 pb-10">
 				{!isLoading &&
 					results.map((profile, i) => (
 						<div key={i} className="flex flex-col justify-start items-start p-4 border rounded-lg shadow-md">
