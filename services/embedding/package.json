@@ -1,7 +1,7 @@
 {
   "name": "@alfie-ai/embedding",
-  "version": "1.0.0",
-  "description": "An Express microservice for hosting the embedding model",
+  "version": "1.1.0",
+  "description": "An Express microservice for hosting the embedding model on Google Cloud Run",
   "main": "index.ts",
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.18",
-    "@types/express": "^5.0.2"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3"
   }
 }
