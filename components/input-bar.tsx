@@ -7,10 +7,9 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Input } from "@heroui/input";
-import { IoIosSearch, IoIosSend } from "react-icons/io";
-import { JSX, KeyboardEvent, useEffect, useState } from "react";
-import Link from "next/link";
+import { FaArrowCircleUp } from "react-icons/fa";
+import { JSX, KeyboardEvent, useEffect, useState, useRef } from "react";
+import { Textarea } from "@heroui/input";
 
 interface InputBarProps {
 	className?: string;
@@ -20,87 +19,77 @@ interface InputBarProps {
 export default function InputBar({ className, onSubmit }: InputBarProps): JSX.Element {
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
-	const [collapseButton, setCollapseButton] = useState<boolean>(false);
-	
-	useEffect(() => {
-		const updateCollapse = () => {
-			setCollapseButton(window.innerWidth < 640);
-		};
-
-		updateCollapse(); // run once on mount
-		window.addEventListener("resize", updateCollapse);
-
-		return () => window.removeEventListener("resize", updateCollapse);
-	}, []);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	const sendQuery = () => {
 		onSubmit(query);
 		setQuery("");
+		setCanSend(false); // Disable the send button after clearing input
 	}
 
-	const SendButton = () => {
-		return (
-			<Button
-				className="absolute right-0"
-				color="default"
-				variant="light"
-				radius="full"
-				size="lg"
-				startContent={<IoIosSend size={30}/>}
-				isDisabled={!canSend}
-				onPress={sendQuery}
-				isIconOnly
-			/>
-		);
-	}
+	const SendButton = () => (
+		<Button
+			className="relative right-0 sm:right-auto sm:top-0 pointer-events-auto"
+			variant="light"
+			radius="full"
+			startContent={<FaArrowCircleUp className="-z-5" size={30}/>} 
+			onPress={sendQuery}
+			isIconOnly
+			isDisabled={!canSend}
+		/>
+	)
+
+	// Keep canSend state in sync with query
+	useEffect(() => {
+		setCanSend(query.length > 0);
+	}, [query]);
 
 	return (
-		<div className={`${className} fixed bottom-10 left-0 w-full px-4 sm:px-48`}>
+		<div className={`${className} sticky flex justify-center items-center bottom-5 left-0 px-4 sm:px-48`}>
 			{/* Backdrop blocker */}
-			<div className="absolute inset-x-0 h-[150px] dark:bg-default-50 bg-blue-200 z-0"/>
-	
+			<div
+				className={`
+					absolute inset-x-0 bg-background/ backdrop-blur-lg bg-gradient-to-b
+					from-background/10 to-background/20 z-0
+				`}
+				
+				// Size the backdrop to cover the input bar
+				style={{ height: "calc(100% + 24px)" }}
+			/>
+
 			{/* Input wrapper */}
-			<div className="flex gap-2 justify-center w-full relative z-10 pt-7">
-				<div className="w-full shadow-lg dark:shadow-blue-300 shadow-gray-700 rounded-full">
-					<Input
-						className="opacity-50"
-						radius="full"
-						color="default"
-						variant="faded"
-						size="lg"
-						placeholder="Enter a prompt..."
-						endContent={<SendButton/>}
+			<div 
+				className="flex justify-center gap-2 w-full lg:w-2/3 relative z-10 pt-7 cursor-text" 
+				onClick={ (event) => {
+					console.log(event.target, event.currentTarget);
+					if (event.target === event.currentTarget) {
+						textareaRef.current?.focus();
+					}
+				}}
+			>
+				<Textarea
+					ref={textareaRef}
+					radius="full"
+					variant="faded"
+					size="lg"
+					placeholder="Enter a prompt..."
+					value={query}
+					endContent={ <SendButton/> }
+					autoFocus
 
-						value={query}
-						onValueChange={(value: string) => {
-							setQuery(value);
-							setCanSend(value.length > 0);
-						}}
+					onValueChange={ (value: string) => {
+						console.log("Input value changed:", value);
+						setQuery(value);
+						setCanSend(value.length > 0);
+					}}
 
-						onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-							if (event.key === "Enter") {
-								event.preventDefault();
-								sendQuery();
-							}
-						}}
-					/>
-				</div>
-
-				<div className="shadow-lg dark:shadow-blue-300 shadow-gray-700 rounded-full">
-					<Link href="/people">
-						<Button
-							className="opacity-75"
-							color="default"
-							variant="faded"
-							size="lg"
-							radius="full"
-							endContent={<IoIosSearch size={25}/>}
-							isIconOnly={collapseButton}
-						>
-							<span className="hidden sm:inline">People Search</span>
-						</Button>
-					</Link>
-				</div>
+					onKeyDown={ (event: KeyboardEvent<HTMLInputElement>) => {
+						if (event.key === "Enter") {
+							event.preventDefault();
+							sendQuery();
+						}
+					}}
+				/>
 			</div>
 		</div>
 	);	
