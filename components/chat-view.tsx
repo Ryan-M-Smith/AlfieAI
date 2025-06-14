@@ -40,7 +40,7 @@ export default function ChatView(): JSX.Element {
 	useEffect(() => {
 		if (!messages.length || !divRef.current) return;
 		const el = divRef.current;
-		const userMessages = el.querySelectorAll("[role='user']");
+		const userMessages = el.querySelectorAll("[data-role='user']");
 		const lastUserEl = userMessages[userMessages.length - 1];
 
 		if (lastUserEl && messages[messages.length - 1].isLoading) {
