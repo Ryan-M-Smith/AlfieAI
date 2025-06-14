@@ -47,7 +47,6 @@
     blur effect on it, just for fun
   * Message bubbles have become cleaner, rounder, and more abstract
   * Dividers are displayed between message exchanges
-  * Prompt boxes autofocus on mount, which makes things more convenient (especially on mobile)
 
 * AlfieAI Chat
   * While there was never really a formal name for AlfieAI's "home" page, it's effectively going
