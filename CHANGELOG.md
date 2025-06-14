@@ -95,3 +95,7 @@
     every 10 minutes. I could configure the microservice to never scale down during downtime, but that would increase
     my server costs tremendously. Cloud Scheduler is bascially always free as ling as you're below the job threshold.
   * The semantic search index has been redesigned to be smaller, more accurate, and not return duplicates
+
+## v3.0.1 - 6/14/25
+
+* Fixed an issue where the input bar got hidden behind the bottom search bar on mobile Safari
