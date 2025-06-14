@@ -9,20 +9,19 @@ import {
 	HarmBlockThreshold, HarmCategory, SafetySetting
 } from "@google/genai";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
-const modelID = "gemini-2.5-flash-preview-04-17";
+const modelID = "gemini-2.5-flash-preview-05-20";
 
 const context = {
-	text:  `You are an AI model designed to give targeted, accurate information about
-			Juniata College. Make sure to be as accurate as possible, format data in lists
-			when possible, and use the internet if you can't find relevant or correct answers.
-			Use bullet points and lists when possible. If necessary, return a list of sources
-			to support your answers.`,
+	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
+			Juniata College. Make sure to be as accurate as possible and use the internet
+			if you can't find relevant or correct answers. Render responses in markdown, with
+			headings, bullet points and lists when possible.`,
 };
   
 const modelConfig: GenerateContentConfig = {
-	temperature: 0.5,
+	temperature: 1,
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
