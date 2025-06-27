@@ -6,10 +6,11 @@
 
 import { Button } from "@heroui/button";
 import { JSX } from "react";
+import Link from "next/link";
+import { PiGavelFill } from "react-icons/pi";
+import smartquotes from "smartquotes-ts";
 
 import Navbar from "@/components/navbar";
-import { PiGavelFill } from "react-icons/pi";
-import Link from "next/link";
 
 export const metadata = {
 	title: "Policies",
@@ -31,11 +32,11 @@ export default function Policies(): JSX.Element {
 				</h1>
 
 				<div className="flex flex-col w-1/3 gap-y-8">
-					<p className="text-justify">
-						AlfieAI's policies cover important legal aspects such as terms of service, privacy policy, cookie policy,
+					<p className="text-justify"> {`
+						${smartquotes(`AlfieAI's policies cover important legal aspects such as terms of service, privacy policy, cookie policy,
 						and disclaimers. These documents ensure transparency and compliance with legal standards, protecting both
-						the users and the platform.
-					</p>
+						the users and the platform.`)}
+					`} </p>
 
 					<p className="text-justify">
 						By accessing or using this website, you acknowledge and agree that you are bound by all applicable terms,
