@@ -111,6 +111,7 @@
   * [Terms of Service](https://alfieai.fyi/policies/terms)
   * [Cookie Policy](https://alfieai.fyi/policies/cookies)
   * [Disclaimers](https://alfieai.fyi/policies/disclaimers)
+* Added a form for users to contact the AlfieAI team
 * Added a cookie consent banner
 * Disabled the slow animation on the navigation dropdown
 * Decreased the opacity of the navbar in dark mode
