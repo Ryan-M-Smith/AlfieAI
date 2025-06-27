@@ -123,7 +123,7 @@ export default function ChatView(): JSX.Element {
 					<span className={`
 						prose text-default-foreground prose-p:my-0.5 prose-p:leading-snug prose-li:my-0.5
 						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5 prose-li:pl-0
-						prose-ul:list-disc rose-a:text-primary-500 prose-headings:text-default-foreground
+						prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary prose-headings:text-default-foreground
 						prose-strong:text-default-foreground prose-strong:font-bold prose-headings:leading-none
 						prose-code:font-mono prose-li:marker:text-default-foreground
 					`}>
@@ -173,7 +173,7 @@ export default function ChatView(): JSX.Element {
 
 	const ToBottomButton = () => (
 		<Button
-			className="absolute bottom-10 left-0 right-0 w-fit mx-auto text-white backdrop-blur-md shadow-lg z-20 pt-1"
+			className="absolute bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-md shadow-lg z-20 pt-1"
 			size={window.innerWidth < 640? "sm" : "md"}
 			radius="full"
 			variant="ghost"
@@ -272,7 +272,7 @@ export default function ChatView(): JSX.Element {
 				</div>
 
 				{/* Only show ToBottom button if content is scrollable and autoScroll is false */}
-				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton />}
+				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton/>}
 			</main>
 			<InputBar onSubmit={setQuery} />
 		</div>

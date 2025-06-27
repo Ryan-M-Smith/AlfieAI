@@ -8,11 +8,9 @@
 
 * Sessions now incorporate chat history and context, meaning AlfieAI can remember what you talked
   about and continue a conversation with you
-
 * Responses now sound more human-like and accessible
   * AlfieAI now prefers using bulleted lists to paragraphs
   * Markdown rendering is now supported
-
 * The model's context window has been adjusted to provide more targeted responses
 * Fixed the corrupted favicon
 
@@ -47,7 +45,6 @@
     blur effect on it, just for fun
   * Message bubbles have become cleaner, rounder, and more abstract
   * Dividers are displayed between message exchanges
-
 * AlfieAI Chat
   * While there was never really a formal name for AlfieAI's "home" page, it's effectively going
     to be called "AlfieAI Chat" and will be denoted as such through the UI. Generally though,
@@ -74,7 +71,6 @@
   * The chat container now auto-scrolls new prompts to the top of the screen and leaves space as AlfieAI generates content
   * When scrolling through conversation history, a "jump to bottom" button appears
   * The send button now correctly disables when the prompt box is empty
-
 * AlfieAI People
   * The search button is now easier to click and the icon shouldn't prevent clicks anymore
   * Larger textareas now make it easier to focus them by clicking anywhere. This is helpful expecially
@@ -85,7 +81,6 @@
   * The acknowledgement is now displayed under the logo instead of on the search box
   * The logo styling is now more consistent between the search page and the results page
   * The logo shows up larger on mobile
-
 * Models
   * I continue to tweak the parameters of the AlfieAI model to give users the best possible experience. The
     provided context has been tweaked slightly and the model temperature has been raised, making AlfieAI think
@@ -100,3 +95,23 @@
 
 * Fixed an issue where the input bar got hidden behind the bottom search bar on mobile Safari
 * Replaced `role` with `data-role` on message `div`s to avoid confusing screen readers
+
+## v3.0.2 - 6/26/25
+
+* Updated some Tailwind Topography styles
+  * Fixed link formatting in chat responses and updated colors to match appearance
+  * Added formatting for blockquotes
+  * Removed default quotes for blockquotes
+* Sending a prompt now automatically collapses the keyboard on mobile
+* Updated the site description
+* Added Google Analytics
+* Added and linked to legal policies
+  * [Policy landing page](https://alfieai.fyi/policies)
+  * [Privacy Policy](https://alfieai.fyi/policies/privacy)
+  * [Terms of Service](https://alfieai.fyi/policies/terms)
+  * [Cookie Policy](https://alfieai.fyi/policies/cookies)
+  * [Disclaimers](https://alfieai.fyi/policies/disclaimers)
+* Added a form for users to contact the AlfieAI team
+* Added a cookie consent banner
+* Disabled the slow animation on the navigation dropdown
+* Decreased the opacity of the navbar in dark mode
