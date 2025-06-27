@@ -13,7 +13,21 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
-      }
+        cursive: ["var(--font-cursive)"],
+      },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            // Remove the quotes around blockquotes 
+            blockquote: {
+              p: {
+                '&::before': { content: 'none' },
+                '&::after': { content: 'none' },
+              },
+            },
+          },
+        },
+      }),
     },
   },
   darkMode: "class",
