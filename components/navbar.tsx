@@ -9,44 +9,77 @@
 import { BsGithub } from "react-icons/bs";
 import { Button } from "@heroui/button";
 import { Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger } from "@heroui/dropdown";
+import Image from "next/image";
+import { IoIosArrowBack } from "react-icons/io";
 import { JSX } from "react";
 import Link from "next/link";   
-import Image from "next/image";
-import { IoIosArrowDown } from "react-icons/io";
-import { usePathname } from "next/navigation";
+import { IoIosArrowDown, IoIosArrowDropleft } from "react-icons/io";
+import { usePathname, useRouter } from "next/navigation";
 
 import { getPage, Page, pages } from "@/lib/pages";
 
 export default function Navbar(): JSX.Element {
 	const pathname = usePathname();
-	const page = getPage(pathname) ?? pages.chat;
+	const router = useRouter();
+
+	const page = getPage(pathname) ?? pages.features.chat;
+	const { features, info } = pages;
+
+	const BackButton = () => (
+		<Button
+			className="font-bold text-lg font-mono ml-4"
+			variant="light"
+			onPress={ () => router.back() }
+			startContent={<IoIosArrowBack/>}
+		>
+			Back
+		</Button>
+	)
 	
 	return (
 		<header className={`
 			sticky top-0 z-30 flex items-center justify-between px-6 py-4 border-b dark:border-zinc-800
-			dark:bg-zinc-950/90 border-slate-300 backdrop-blur-lg bg-transparent
+			dark:bg-zinc-950/45 border-slate-300 backdrop-blur-lg bg-transparent
 		`}>
-			<Dropdown>
-				<DropdownTrigger>
-					<Button variant="ghost" endContent={<IoIosArrowDown size={20}/>}>
-						{page.card}
-					</Button>
-				</DropdownTrigger>
+			<div className="flex justify-start items-start">
+				<Dropdown disableAnimation>
+					<DropdownTrigger>
+						<Button variant="ghost" endContent={<IoIosArrowDown size={20}/>}>
+							{page.card}
+						</Button>
+					</DropdownTrigger>
 
-				<DropdownMenu aria-label="Static Actions" disabledKeys={ [page.name] }>
-					<DropdownSection title="Features">
-						{ Object.values(pages).map((page: Page) => (
-							<DropdownItem 
-								key={page.name} 
-								href={page.href}
-								description={page.description} 
-							>
-								{page.card}
-							</DropdownItem>
-						))}
-					</DropdownSection>
-				</DropdownMenu>
-			</Dropdown>
+					<DropdownMenu aria-label="Static Actions" disabledKeys={ [page.name] }>
+						<DropdownSection title="Features">
+							{ Object.values(features).map((page: Page) => (
+								<DropdownItem 
+									key={page.name} 
+									href={page.href}
+									description={page.description} 
+									textValue={page.name}
+								>
+									{page.card}
+								</DropdownItem>
+							))}
+						</DropdownSection>
+
+						<DropdownSection title="Info">
+							{ Object.values(info).map((page: Page) => (
+								<DropdownItem 
+									key={page.name} 
+									href={page.href}
+									description={page.description} 
+									textValue={page.name}
+								>
+									{page.card}
+								</DropdownItem>
+							))}
+						</DropdownSection>
+					</DropdownMenu>
+				</Dropdown>
+
+				{ pathname.includes("/policies/") && <BackButton/> }
+			</div>
 			
 			<div className="flex gap-2">
 				<Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
