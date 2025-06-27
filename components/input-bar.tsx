@@ -75,7 +75,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 				tabIndex={0}
 				aria-label="Focus text input"
 				onKeyDown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
+					if (e.key === "Enter" || e.key === " ") {
 						textareaRef.current?.focus();
 					}
 				}}
@@ -98,6 +98,10 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 						if (event.key === "Enter") {
 							event.preventDefault();
 							sendQuery();
+						}
+
+						if (window.innerWidth < 640 && document.activeElement) {
+							(document.activeElement as HTMLElement).blur();
 						}
 					}}
 				/>
