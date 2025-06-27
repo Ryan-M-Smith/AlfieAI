@@ -11,7 +11,6 @@ import EmailTemplate from "@/components/email-template";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
-	console.log("Resend initialized with API key:", process.env.RESEND_API_KEY);
 	const props = await request.json();
 
 	try {
