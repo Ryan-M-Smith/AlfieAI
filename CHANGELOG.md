@@ -100,3 +100,27 @@
 
 * Fixed an issue where the input bar got hidden behind the bottom search bar on mobile Safari
 * Replaced `role` with `data-role` on message `div`s to avoid confusing screen readers
+
+## v3.0.2 - 6/26/25
+
+* Updated some Tailwind Topography styles
+  * Fixed link formatting in chat responses and updated colors to match appearance
+  * Added formatting for blockquotes
+  * Removed default quotes for blockquotes
+
+* Submitting
+
+* Added Google Analytics
+
+* Added and linked to legal policies
+  * [Policy landing page](https://alfieai.fyi/policies)
+  * [Privacy Policy](https://alfieai.fyi/policies/privacy)
+  * [Terms of Service](https://alfieai.fyi/policies/terms)
+  * [Cookie Policy](https://alfieai.fyi/policies/cookies)
+  * [Disclaimers](https://alfieai.fyi/policies/disclaimers)
+
+* Added a cookie consent banner
+
+* Disabled the slow animation on the navigation dropdown
+
+* Decreased the opacity of the navbar in dark mode
