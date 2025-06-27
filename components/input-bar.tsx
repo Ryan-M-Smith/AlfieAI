@@ -25,6 +25,11 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 		onSubmit(query);
 		setQuery("");
 		setCanSend(false); // Disable the send button after clearing input
+
+		// Unfocus the textarea on mobile to hide the keyboard
+		if (window.innerWidth < 640 && document.activeElement) {
+			(document.activeElement as HTMLElement).blur();
+		}
 	}
 
 	const SendButton = () => (
@@ -98,10 +103,6 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 						if (event.key === "Enter") {
 							event.preventDefault();
 							sendQuery();
-						}
-
-						if (window.innerWidth < 640 && document.activeElement) {
-							(document.activeElement as HTMLElement).blur();
 						}
 					}}
 				/>
