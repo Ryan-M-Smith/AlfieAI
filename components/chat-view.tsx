@@ -251,7 +251,7 @@ export default function ChatView(): JSX.Element {
 							<Hero/>
 						</div>
 					) : (
-						<ChatContainer className="space-y-4 pb-20">
+						<ChatContainer className="space-y-4 sm:pb-10 pb-28">
 							{ messages.map(({ content, isLoading }, i) => {
 								const isUser = i % 2 === 0;
 
