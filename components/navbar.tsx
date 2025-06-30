@@ -38,10 +38,10 @@ export default function Navbar(): JSX.Element {
 	
 	return (
 		<header className={`
-			sticky top-0 z-30 flex items-center justify-between px-6 py-4 border-b dark:border-zinc-800
+			sticky top-0 z-30 flex items-center justify-between px-2 py-4 border-b dark:border-zinc-800
 			dark:bg-zinc-950/45 border-slate-300 backdrop-blur-lg bg-transparent
 		`}>
-			<div className="flex justify-start items-start">
+			<div className="flex items-center gap-x-4 pl-0">
 				<Dropdown disableAnimation>
 					<DropdownTrigger>
 						<Button variant="ghost" endContent={<IoIosArrowDown size={20}/>}>
@@ -78,10 +78,10 @@ export default function Navbar(): JSX.Element {
 					</DropdownMenu>
 				</Dropdown>
 
-				{ pathname.includes("/policies/") && <BackButton/> }
+				{/* { pathname.includes("/policies/") && <BackButton/> } */}
 			</div>
 			
-			<div className="flex gap-2">
+			<div className="flex gap-2 pr-0">
 				<Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
 					<Button
 						className={`
