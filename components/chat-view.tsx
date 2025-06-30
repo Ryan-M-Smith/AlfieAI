@@ -241,10 +241,10 @@ export default function ChatView(): JSX.Element {
 	return (
 		<div className="w-full h-screen flex flex-col text-default-foreground overflow-hidden">
 			<Navbar />
-			<main className="flex-1 flex flex-col relative overflow-hidden">
+			<main className="flex-1 flex flex-col overflow-hidden">
 				<div
 					ref={divRef}
-					className={`absolute inset-0 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
+					className={`flex-1 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
 				>
 					{messages.length === 0 ? (
 						<div className="flex flex-col items-center justify-center h-full text-center text-zinc-400">
