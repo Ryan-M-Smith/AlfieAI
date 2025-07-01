@@ -26,7 +26,7 @@ export default function Disclaimers(): JSX.Element {
 
 			<div className="flex justify-center w-full py-10">
 				<div className="max-w-3xl w-full px-4">
-					<MarkdownRenderer content={markdown} />
+					<MarkdownRenderer content={markdown}/>
 				</div>
 			</div>
 		</div>
