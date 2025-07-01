@@ -2,7 +2,7 @@
 
 ## v1.0.0 - 4/23/25
 
-* Initial release of the AlfieAI Chat
+* Initial release of the AlfieAI Chat (live at [https://alfieai.fyi](https://alfieai.fyi))
 
 ## v1.1.0 - 4/29/25
 
@@ -115,3 +115,12 @@
 * Added a cookie consent banner
 * Disabled the slow animation on the navigation dropdown
 * Decreased the opacity of the navbar in dark mode
+
+## v3.0.3 - 7/1/25
+
+* Mobile updates
+  * The policy doucments and contact page now fit the screen correctly
+  * Fixed an issue where generated text was cut off behind the input bar
+  * Fixed an issue where the jump to bottom button wouldn't show up
+  * Added a mobile-friendly version of the back button on the policy pages
+  * Formatted the policy link bar to be fully visible
