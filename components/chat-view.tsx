@@ -115,7 +115,10 @@ export default function ChatView(): JSX.Element {
 
 	// Update the last message with the model's streamed response
 	useEffect(() => {
-		if (!response || response.length < 1) return;
+		if (!response || response.length < 1) {
+			return;
+		}
+
 		const newMessages = [...messages];
 		newMessages[newMessages.length - 1] = {
 			content: (
@@ -125,7 +128,7 @@ export default function ChatView(): JSX.Element {
 						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5 prose-li:pl-0
 						prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary prose-headings:text-default-foreground
 						prose-strong:text-default-foreground prose-strong:font-bold prose-headings:leading-none
-						prose-code:font-mono prose-li:marker:text-default-foreground
+						prose-code:font-mono prose-code:text-foreground-600 prose-li:marker:text-default-foreground
 					`}>
 						<Markdown
 							remarkPlugins={[remarkGfm]}
@@ -149,6 +152,7 @@ export default function ChatView(): JSX.Element {
 		),
 			isLoading: false
 		};
+
 		setMessages(newMessages);
 	}, [response]);
 
@@ -239,19 +243,19 @@ export default function ChatView(): JSX.Element {
 	const isScrollable = divRef.current && divRef.current.scrollHeight > divRef.current.clientHeight + 2;
 
 	return (
-		<div className="w-full h-screen flex flex-col text-default-foreground overflow-hidden">
-			<Navbar />
-			<main className="flex-1 flex flex-col overflow-hidden">
+		<div className="w-full h-dvh flex flex-col text-default-foreground overflow-hidden">
+			<Navbar/>
+			<main className="flex-1 flex flex-col relative overflow-hidden">
 				<div
 					ref={divRef}
-					className={`flex-1 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
+					className={`absolute inset-0 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
 				>
 					{messages.length === 0 ? (
 						<div className="flex flex-col items-center justify-center h-full text-center text-zinc-400">
 							<Hero/>
 						</div>
 					) : (
-						<ChatContainer className="space-y-4 sm:pb-10 pb-28">
+						<ChatContainer className="space-y-4 pb-20">
 							{ messages.map(({ content, isLoading }, i) => {
 								const isUser = i % 2 === 0;
 
@@ -274,7 +278,8 @@ export default function ChatView(): JSX.Element {
 				{/* Only show ToBottom button if content is scrollable and autoScroll is false */}
 				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton/>}
 			</main>
-			<InputBar onSubmit={setQuery} />
+
+			<InputBar onSubmit={setQuery}/>
 		</div>
 	);
 }
