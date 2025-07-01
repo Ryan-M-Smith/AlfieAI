@@ -243,7 +243,7 @@ export default function ChatView(): JSX.Element {
 	const isScrollable = divRef.current && divRef.current.scrollHeight > divRef.current.clientHeight + 2;
 
 	return (
-		<div className="w-full h-dvh flex flex-col text-default-foreground overflow-hidden">
+		<div className="relative w-full h-dvh flex flex-col text-default-foreground overflow-hidden">
 			<Navbar/>
 			<main className="flex-1 flex flex-col relative overflow-hidden">
 				<div
