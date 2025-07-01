@@ -58,7 +58,7 @@ export default function Navbar(): JSX.Element {
 
 	return (
 		<>
-			{ pathname.includes("/policies/") && <BackButton/> }
+			{ pathname.includes("/policies/") && isMobile && <BackButton/> }
 
 			<header className={`
 				sticky top-0 z-30 flex items-center justify-between px-2 py-4 border-b dark:border-zinc-800
@@ -100,6 +100,8 @@ export default function Navbar(): JSX.Element {
 							</DropdownSection>
 						</DropdownMenu>
 					</Dropdown>
+
+					{ pathname.includes("/policies/") && !isMobile && <BackButton/> }
 				</div>
 				
 				<div className="flex gap-2 pr-1">
