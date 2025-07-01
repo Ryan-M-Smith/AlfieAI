@@ -177,12 +177,12 @@ export default function ChatView(): JSX.Element {
 
 	const ToBottomButton = () => (
 		<Button
-			className="absolute bottom-36 sm:bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-md shadow-lg z-20 pt-1"
+			className="absolute bottom-36 sm:bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pt-1"
 			size={window.innerWidth < 640? "sm" : "md"}
 			radius="full"
 			variant="ghost"
-			startContent={<IoIosArrowDown size={30} />}
 			onPress={scrollToBottom}
+			startContent={<IoIosArrowDown size={30} />}
 			isIconOnly
 		/>
 	)
