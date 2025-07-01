@@ -25,7 +25,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps): JS
 			prose-li:marker:text-default-foreground prose-h1:text-center
 			prose-blockquote:border-l-4 prose-blockquote:border-default prose-blockquote:pl-4
 			prose-blockquote:italic prose-blockquote:text-foreground-500 prose-blockquote:bg-foreground/10
-			prose-blockquote:my-4 prose-blockquote:py-2
+			prose-blockquote:my-4 prose-blockquote:py-2 break-words
 		`}>
 			<Markdown
 				remarkPlugins={[remarkGfm]}
