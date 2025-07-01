@@ -15,9 +15,9 @@ export default function Contact(): JSX.Element {
 			<Navbar/>
 
 			<div className="flex flex-col justify-center items-center py-10 gap-y-10">
-				<h1 className="flex justify-center items-center text-7xl gap-x-6">
+				<h1 className="flex md:flex-row flex-col justify-center items-center text-5xl sm:text-7xl gap-x-3 sm:gap-x-6">
 					<span className="text-lime-500 font-cursive font-bold">Contact</span>
-					<span> the AlfieAI Team </span>
+					<span>the AlfieAI Team</span>
 				</h1>
 
 				<ContactForm/>

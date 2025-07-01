@@ -24,8 +24,10 @@ export default function CookiePolicy(): JSX.Element {
 		<div>
 			<Navbar/>
 
-			<div className="flex justify-center items-center w-full py-10">
-				<MarkdownRenderer content={markdown} />
+			<div className="flex justify-center w-full py-10">
+				<div className="max-w-3xl w-full px-4">
+					<MarkdownRenderer content={markdown}/>
+				</div>
 			</div>
 		</div>
 	);
