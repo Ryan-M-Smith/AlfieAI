@@ -64,7 +64,9 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 				`}
 				
 				// Size the backdrop to cover the input bar based on the viewport width
-				style={{ height: `calc(100% + ${Math.pow(-1, Number(window.innerWidth < 640)) * 10}px)` }}
+				style={{
+					height: `calc(100% + ${typeof window !== "undefined" && window.innerWidth < 640 ? 24 : 10}px)`
+				}}
 			/>
 
 			{/* Input wrapper */}
