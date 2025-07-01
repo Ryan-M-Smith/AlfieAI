@@ -125,7 +125,7 @@ export default function ChatView(): JSX.Element {
 				<div className="flex justify-center items-center w-full mt-1">
 					<span className={`
 						prose text-default-foreground prose-p:my-0.5 prose-p:leading-snug prose-li:my-0.5
-						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5 prose-li:pl-0
+						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5
 						prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary prose-headings:text-default-foreground
 						prose-strong:text-default-foreground prose-strong:font-bold prose-headings:leading-none
 						prose-code:font-mono prose-code:text-foreground-600 prose-li:marker:text-default-foreground
