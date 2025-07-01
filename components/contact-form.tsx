@@ -49,9 +49,9 @@ export default function ContactForm(): JSX.Element {
 	}
 
 	return (
-		<Form className="w-1/2 mt-10" onSubmit={handleSubmit}>
+		<Form className="w-4/5 sm:w-1/2 mt-10" onSubmit={handleSubmit}>
 			<div className="flex flex-col gap-y-4 w-full">
-				<div className="flex justify-center gap-x-4">
+				<div className="flex sm:flex-row flex-col justify-center gap-4">
 					<Input
 						label="First Name"
 						name="firstName"
