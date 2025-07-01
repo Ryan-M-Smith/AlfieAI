@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 	`;
 
 	return (
-		<html className={`h-screen dark:bg-zinc-950/80 light:bg-gray-100 overscroll-none`} lang="en" suppressHydrationWarning>
+		<html className={`dark:bg-zinc-950/80 light:bg-gray-100 overscroll-none`} lang="en" suppressHydrationWarning>
 			<head>
 				<meta name="google-site-verification" content="9vfCGFrG_b3GRRS8iTZ1tIYAe_Ek0OhxcQgsVKzeza8"/>
 
@@ -55,7 +55,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 				<link rel="stylesheet" href="/styles/cc-custom.css"/>
 			</head>
 			
-			<body className={`h-screen font-sans antialiased ${fonts}`}>
+			<body className={`font-sans antialiased ${fonts}`}>
 				<Providers themeProps={{
 					attribute: "class",
 					defaultTheme: "system",
