@@ -124,3 +124,4 @@
   * Fixed an issue where the jump to bottom button wouldn't show up
   * Added a mobile-friendly version of the back button on the policy pages
   * Formatted the policy link bar to be fully visible
+* Fixed an issue causing list text to render below the bullet point
