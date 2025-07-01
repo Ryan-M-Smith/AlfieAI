@@ -177,7 +177,7 @@ export default function ChatView(): JSX.Element {
 
 	const ToBottomButton = () => (
 		<Button
-			className="absolute bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-md shadow-lg z-20 pt-1"
+			className="absolute bottom-36 sm:bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-md shadow-lg z-20 pt-1"
 			size={window.innerWidth < 640? "sm" : "md"}
 			radius="full"
 			variant="ghost"
@@ -255,7 +255,7 @@ export default function ChatView(): JSX.Element {
 							<Hero/>
 						</div>
 					) : (
-						<ChatContainer className="space-y-4 pb-20">
+						<ChatContainer className="space-y-4 sm:pb-20 pb-32">
 							{ messages.map(({ content, isLoading }, i) => {
 								const isUser = i % 2 === 0;
 
