@@ -1,6 +1,7 @@
 onlyBuiltDependencies:
   - '@heroui/shared-utils'
   - '@parcel/watcher'
+  - '@tailwindcss/oxide'
   - '@vercel/speed-insights'
   - protobufjs
   - sharp
