@@ -37,7 +37,7 @@ export default function Navbar(): JSX.Element {
 
 	const BackButton = () => isMobile? (
 		<Button
-			className="fixed left-2 top-[7rem] w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pr-1"
+			className="fixed left-2 top-28 w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pr-1"
 			size={"md"}
 			radius="full"
 			variant="ghost"
@@ -118,7 +118,7 @@ export default function Navbar(): JSX.Element {
 						/>
 					</Link>
 
-					<div className="border-r-1 border-default-400"/>
+					<div className="border-r border-default-400"/>
 
 					<Link href="/">
 						<Image
