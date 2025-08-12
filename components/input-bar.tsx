@@ -59,7 +59,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 			{/* Backdrop blocker */}
 			<div
 				className={`
-					absolute inset-x-0 bg-background/ backdrop-blur-lg bg-gradient-to-b
+					absolute inset-x-0 bg-background/ backdrop-blur-lg bg-linear-to-b
 					from-background/10 to-background/20 z-0
 				`}
 				

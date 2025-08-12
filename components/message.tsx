@@ -22,7 +22,7 @@ export default function Message({ className, children, role, isLoading, isFirst 
 				{/* Horizontal divider bar - hidden for the first message */}
 				{ !isFirst && (
 					<div className="block w-full my-6">
-						<hr className="border-1 h-px border-default-400"/>
+						<hr className="border h-px border-default-400"/>
 					</div>
 				)}
 				
