@@ -133,3 +133,4 @@
   * Near-instant feedback to any question
   * Targeted, accurate, high-quality audio responses
 * Switched from smartquotes-ts (removed from NPM) to smartquotes.js
+* The page title for AlfieAI People now matches the convention of the rest of the site
