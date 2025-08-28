@@ -125,3 +125,11 @@
   * Added a mobile-friendly version of the back button on the policy pages
   * Formatted the policy link bar to be fully visible
 * Fixed an issue causing list text to render below the bullet point
+
+## v4.0.0 - 8/31/25
+
+* Introducing AlfieAI Live - a live, interactive chatbot powered by the Gemini Live API
+  * Audio visualizer
+  * Near-instant feedback to any question
+  * Targeted, accurate, high-quality audio responses
+* Switched from smartquotes-ts (removed from NPM) to smartquotes.js
