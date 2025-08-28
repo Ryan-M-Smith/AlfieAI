@@ -8,7 +8,7 @@ import { Button } from "@heroui/button";
 import { JSX } from "react";
 import Link from "next/link";
 import { PiGavelFill } from "react-icons/pi";
-import smartquotes from "smartquotes-ts";
+import smartquotes from "smartquotes";
 
 import Navbar from "@/components/navbar";
 
