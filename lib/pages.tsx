@@ -6,6 +6,7 @@
 
 import { BsAsterisk } from "react-icons/bs";
 import { GrSchedules } from "react-icons/gr";
+import { FaMicrophone } from "react-icons/fa";
 import { IoChatboxEllipses } from "react-icons/io5";
 import { MdOutlineContactSupport } from "react-icons/md";
 import { PiGavelFill } from "react-icons/pi";
@@ -62,6 +63,21 @@ export const pages: PageLayout = {
 					<GrSchedules size={15}/>
 					<span className="text-purple-400 font-chalkboard font-normal">
 						Courses
+					</span>
+				</span>
+			)
+		},
+
+		live: {
+			href: "/live",
+			name: "live",
+			description: "Experience a live audio chat with AlfieAI",
+			card: (
+				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-bold tracking-tight">
+					AlfieAI
+					<FaMicrophone size={15}/>
+					<span className="text-red-500 font-big font-thin">
+						Live
 					</span>
 				</span>
 			)
