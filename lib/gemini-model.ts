@@ -10,8 +10,7 @@ import {
 } from "@google/genai";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const modelID = "gemini-2.5-flash-preview-05-20";
+const modelID = "gemini-2.5-flash";
 
 const context = {
 	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
@@ -62,7 +61,7 @@ const chatConfig: CreateChatParameters = {
 const chat = genAI.chats.create(chatConfig);
 
 export async function generate(query: string) {
-	return new ReadableStream({
+	return new ReadableStream<string>({
 		start: async (controller) => {
 			const response = await chat.sendMessageStream({
 				message: query
@@ -84,7 +83,7 @@ export async function generate(query: string) {
 }
 
 export async function generateWithChunking(query: string, chunkSize: number) {
-  return new ReadableStream({
+  	return new ReadableStream<string>({
     	async start(controller) {
 			const startTime = performance.now();
 

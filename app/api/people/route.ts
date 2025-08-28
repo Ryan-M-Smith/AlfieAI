@@ -5,13 +5,19 @@
 //
 
 import { Document } from "mongodb";
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import clientPromise from "@/lib/mongodb"
 import { embed, uniqueKey } from "@/lib/util"
 
-export async function POST(request: Request) {
-  	const { query } = await request.json();
+export async function GET(request: NextRequest) {
+  	const searchParams = request.nextUrl.searchParams;
+	const query = searchParams.get("query") || "";
+
+	if (!query) {
+		return NextResponse.json({ results: [] });
+	}
+
 	const queryEmbedding = await embed(query);
 
 	const client = await clientPromise;

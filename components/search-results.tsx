@@ -29,13 +29,9 @@ export default function SearchResults() {
 
 		(async () => {
 			const decodedQuery = decodeURIComponent(query);
-			const response = await fetch("/api/people", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ query: decodedQuery }),
-			});
+			const params = new URLSearchParams({ query: decodedQuery });
+			
+			const response = await fetch(`/api/people?${params.toString()}`);
 			const { results } = await response.json();
 			
 			setResults(results);

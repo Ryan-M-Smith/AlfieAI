@@ -14,6 +14,7 @@ const config = {
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
         cursive: ["var(--font-cursive)"],
+        chalkboard: ["var(--font-chalkboard)"],
       },
       typography: (theme) => ({
         DEFAULT: {

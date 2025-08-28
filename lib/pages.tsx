@@ -5,6 +5,7 @@
 //
 
 import { BsAsterisk } from "react-icons/bs";
+import { GrSchedules } from "react-icons/gr";
 import { IoChatboxEllipses } from "react-icons/io5";
 import { MdOutlineContactSupport } from "react-icons/md";
 import { PiGavelFill } from "react-icons/pi";
@@ -46,6 +47,21 @@ export const pages: PageLayout = {
 					<BsAsterisk size={15}/>
 					<span className="text-yellow-500 dark:text-yellow-300 font-serif font-thin">
 						People
+					</span>
+				</span>
+			)
+		},
+
+		courses: {
+			href: "/courses",
+			name: "courses",
+			description: "Create next semester's schedule with help from AlfieAI",
+			card: (
+				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-bold tracking-tight">
+					AlfieAI
+					<GrSchedules size={15}/>
+					<span className="text-purple-400 font-chalkboard font-normal">
+						Courses
 					</span>
 				</span>
 			)

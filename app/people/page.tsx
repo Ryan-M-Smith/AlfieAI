@@ -19,7 +19,7 @@ export const metadata = {
 export default function People(): JSX.Element {
 	return (
 		<div className="h-screen flex flex-col">
-			<Navbar />
+			<Navbar/>
 			<main className="flex-1 flex justify-center items-center px-4 sm:px-0">
 				<div className="flex flex-col gap-y-10 w-full">
 					<div className="flex flex-col gap-y-4">

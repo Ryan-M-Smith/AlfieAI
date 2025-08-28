@@ -162,21 +162,17 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	 * Send a search query to the server and navigate to the results page
 	 */
 	const sendQuery = () => {
-		if (!canSend) {
+		if (!canSend || query === "") {
 			return;
 		}
-
-		if (query === "") {
-			router.push("/people");
-		}
+		
+		const encodedQuery = encodeURIComponent(query);
+		router.push(`/people/search?query=${encodedQuery}`);
 
 		if (setIsSearching) {
 			setIsSearching(true);
 			setIsCleared(true);
 		}
-
-		const encodedQuery = encodeURIComponent(query);
-		router.push(`/people/search?query=${encodedQuery}`);
 
 		setCanSend(false);
 	}
