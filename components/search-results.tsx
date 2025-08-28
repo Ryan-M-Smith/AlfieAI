@@ -9,7 +9,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Spinner } from "@heroui/spinner";
-import smartquotes from "smartquotes-ts";
+import smartquotes from "smartquotes";
 import { FaLinkedin } from "react-icons/fa";
 import Link from "next/link";
 
