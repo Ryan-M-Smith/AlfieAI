@@ -1,8 +1,10 @@
 import {
-	Dancing_Script as FontCursive,
 	Fira_Code as FontMono,
 	Inter as FontSans,
 	Schoolbell as FontChalkboard,
+	Dancing_Script as FontCursive,
+	Black_Ops_One as FontBig,
+	Modak as FontBubble
 } from "next/font/google";
 
 export const fontSans = FontSans({
@@ -25,3 +27,15 @@ export const fontChalkboard = FontChalkboard({
 	variable: "--font-chalkboard",
 	weight: "400"
 });
+
+export const fontBig = FontBig({
+	subsets: ["latin"],
+	weight: "400",
+	variable: "--font-big"
+})
+
+export const fontBubble = FontBubble({
+	subsets: ["latin"],
+	weight: "400",
+	variable: "--font-bubble"
+})

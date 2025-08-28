@@ -15,6 +15,8 @@ const config = {
         mono: ["var(--font-mono)"],
         cursive: ["var(--font-cursive)"],
         chalkboard: ["var(--font-chalkboard)"],
+        big: ["var(--font-big)"],
+        bubble: ["var(--font-bubble)"],
       },
       typography: (theme) => ({
         DEFAULT: {

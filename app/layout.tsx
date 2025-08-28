@@ -13,7 +13,7 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
-import { fontSans, fontMono, fontCursive, fontChalkboard } from "@/config/fonts";
+import { fontBig, fontBubble, fontChalkboard, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 import React from "react";
@@ -39,12 +39,14 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-	const fonts = [
-		fontSans.variable,
-		fontMono.variable,
-		fontCursive.variable,
-		fontChalkboard.variable,
-	];
+	const fonts = `
+		${fontSans.variable}
+		${fontMono.variable}
+		${fontChalkboard.variable}
+		${fontCursive.variable}
+		${fontBig.variable}
+		${fontBubble.variable}
+	`;
 
 	return (
 		<html className={`dark:bg-zinc-950/80 light:bg-gray-100 overscroll-none`} lang="en" suppressHydrationWarning>
@@ -56,7 +58,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 				<link rel="stylesheet" href="/styles/cc-custom.css"/>
 			</head>
 			
-			<body className={`font-sans antialiased ${fonts.join(" ")}`}>
+			<body className={`font-sans antialiased ${fonts}`}>
 				<Providers themeProps={{
 					attribute: "class",
 					defaultTheme: "system",
