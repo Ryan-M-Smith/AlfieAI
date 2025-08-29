@@ -5,6 +5,7 @@
 //
 
 import { FaMicrophone } from "react-icons/fa";
+import Link from "next/link";
 
 import Navbar from "@/components/navbar";
 
@@ -18,7 +19,7 @@ export default function Live() {
 		<div className="flex flex-col overflow-hidden min-h-screen relative bg-black">
 			<Navbar/>
 
-			<span className="pointer-events-none absolute inset-0 z-10 top-[12rem] text-center px-2 sm:px-0">
+			<div className="pointer-events-none absolute inset-0 z-10 top-[12rem] text-center px-2 sm:px-0">
 				<span className="flex justify-center items-center gap-x-1 relative text-4xl sm:text-7xl text-white font-big">
 					<span
 						className={`
@@ -30,11 +31,7 @@ export default function Live() {
 					<FaMicrophone className="justify-center" size={28}/>
 					<span className="text-red-500"> Live </span>
 				</span>
-
-				<h3 className="flex justify-center items-center gap-x-1 relative text-[10px] sm:text-xs italic text-default-500 text-serif ">
-					Live audio chat powered by Gemini Live. Generative AI is experimental and may make mistakes.
-				</h3>
-			</span>
+			</div>
 
 			<iframe
 				className="flex-1 w-full border-none min-h-[60vh] sm:min-h-0"
@@ -42,6 +39,22 @@ export default function Live() {
 				title="AlfieAI Live Chat"
 				allow="microphone"
 			/>
+
+			<div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 text-center px-2 sm:px-0">
+				<span className="flex justify-center items-center gap-x-1 relative text-[10px] sm:text-xs italic text-default-500 text-serif">
+					Live audio chat powered by
+					<Link
+						className="underline pointer-events-auto whitespace-nowrap"
+						href="https://gemini.google/overview/gemini-live/"
+						rel="noopener noreferrer"
+						target="_blank"
+						passHref
+					>
+						Gemini Live.
+					</Link>
+					Generative AI is experimental and may make mistakes.
+				</span>
+			</div>
 		</div>
 	);
 }
