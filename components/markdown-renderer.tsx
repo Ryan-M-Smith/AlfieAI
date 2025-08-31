@@ -1,7 +1,7 @@
 //
 // Filename: markdown-renderer.tsx
 // Description: Render Markdown content using react-markdown
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";

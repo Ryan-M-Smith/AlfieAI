@@ -1,7 +1,7 @@
 //
 // Filename: cookie-consent-config.ts
 // Description: Configuration for the cookie consent component
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import type { CookieConsentConfig } from "vanilla-cookieconsent";

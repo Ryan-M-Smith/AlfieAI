@@ -1,7 +1,7 @@
 //
 // Filename: util.ts
 // Description: Utility functions
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { Document } from "mongodb";

@@ -1,7 +1,7 @@
 //
 // Filename: search-box.tsx
 // Describtion: The search box for the people site
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";
@@ -27,7 +27,7 @@ interface SearchBoxProps {
 export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Element {
 	const router = useRouter();
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	
+
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
 	const [placeholder, setPlaceholder] = useState<string>("");

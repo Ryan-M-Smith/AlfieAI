@@ -1,7 +1,7 @@
 //
 // Filename: page.tsx
 // Route: /people
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { BsAsterisk } from "react-icons/bs";

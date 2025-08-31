@@ -1,7 +1,7 @@
 //
 // Filename: contact-form.tsx
 // Description: Contact form for users to reach out to the AlfieAI team
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";

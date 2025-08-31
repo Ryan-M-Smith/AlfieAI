@@ -1,7 +1,7 @@
 //
 // Filename: middleware.ts
 // Description: Handle subdomain routing for the app
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { NextRequest, NextResponse } from "next/server"

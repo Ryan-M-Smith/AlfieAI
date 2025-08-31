@@ -1,7 +1,7 @@
 //
 // Filename: page.tsx
 // Route: /live
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { FaMicrophone } from "react-icons/fa";
