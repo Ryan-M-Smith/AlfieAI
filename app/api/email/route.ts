@@ -1,11 +1,7 @@
 //
 // Filename: route.ts
 // Route: /api/email
-<<<<<<< HEAD
-// Copyright (c) 2025 Ryan Smith
-=======
-// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
->>>>>>> 19dbd4e (Update boilerplate)
+// Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
 import { Resend } from 'resend';
