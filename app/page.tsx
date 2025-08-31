@@ -1,7 +1,7 @@
 //
 // Filename: page.tsx
 // Route: /
-// Copyright (c) 2025 Ryan Smith
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import ChatView from "@/components/chat-view";

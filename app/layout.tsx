@@ -1,7 +1,7 @@
 //
 // Filename: layout.tsx
 // Description: The website's root layout
-// Copyright (c) 2025 Ryan Smith
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import "@/styles/globals.css";
