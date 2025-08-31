@@ -1,7 +1,11 @@
 //
 // Filename: search-box.tsx
 // Describtion: The search box for the people site
+<<<<<<< HEAD
 // Copyright (c) 2025 Ryan Smith
+=======
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
+>>>>>>> 19dbd4e (Update boilerplate)
 //
 
 "use client";
