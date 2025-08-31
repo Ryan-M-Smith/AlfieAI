@@ -1,11 +1,7 @@
 //
 // Filename: gemini-model.ts
 // Description: Pass queries to a Gemini 2.5 Flash model running in Google Cloud
-<<<<<<< HEAD
-// Copyright (c) 2025 Ryan Smith
-=======
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
->>>>>>> 19dbd4e (Update boilerplate)
 //
 
 import {
