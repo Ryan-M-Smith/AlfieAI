@@ -1,7 +1,7 @@
 //
 // Filename: page.tsx
 // Description: An Express microservice for hosting the embedding model
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import cors from "cors";

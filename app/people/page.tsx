@@ -1,7 +1,7 @@
 //
 // Filename: page.tsx
 // Route: /people
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import { BsAsterisk } from "react-icons/bs";
@@ -12,7 +12,7 @@ import Navbar from "@/components/navbar";
 import Link from "next/link";
 
 export const metadata = {
-	title: "AlfieAI People",
+	title: "People",
 	description: "AlfieAI's LinkedIn semantic people search for Juniata"
 };
 

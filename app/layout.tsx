@@ -1,7 +1,7 @@
 //
 // Filename: layout.tsx
 // Description: The website's root layout
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import "@/styles/globals.css";
@@ -13,7 +13,7 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
-import { fontSans, fontMono, fontCursive } from "@/config/fonts";
+import { fontBig, fontBubble, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 import React from "react";
@@ -43,6 +43,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 		${fontSans.variable}
 		${fontMono.variable}
 		${fontCursive.variable}
+		${fontBig.variable}
+		${fontBubble.variable}
 	`;
 
 	return (

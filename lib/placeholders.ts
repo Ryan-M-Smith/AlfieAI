@@ -1,7 +1,7 @@
 //
 // Filename: placeholders.ts
 // Describtion: Sample prompts for the People search box
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 const placeholders = [

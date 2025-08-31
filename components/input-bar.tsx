@@ -1,7 +1,7 @@
 //
 // Filename: input-bar.tsx
 // Description: The input bar used to prompt the AI
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 "use client";
@@ -69,7 +69,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 
 			{/* Input wrapper */}
 			<div 
-				className="flex justify-center gap-2 w-full lg:w-2/3 relative z-10 pt-7 cursor-text" 
+				className="flex flex-col justify-center gap-2 w-full lg:w-2/3 relative z-10 pt-7 cursor-text" 
 				onClick={ (event) => {
 					console.log(event.target, event.currentTarget);
 					if (event.target === event.currentTarget) {
@@ -106,6 +106,10 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 						}
 					}}
 				/>
+
+				<h3 className="text-center text-xs italic font-sans text-default-500">
+					Generative AI is experimental and may make mistakes. Remember to check all information.
+				</h3>
 			</div>
 		</div>
 	);	

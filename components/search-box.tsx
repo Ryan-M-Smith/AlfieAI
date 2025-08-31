@@ -1,7 +1,7 @@
 //
 // Filename: search-box.tsx
-// Describtion: The search box for the people site
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Description: The search box for the people site
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 "use client";
@@ -10,7 +10,10 @@ import { Button } from "@heroui/button";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
-import { Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import {
+	Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback,
+	useEffect, useRef, useState
+} from "react";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@heroui/input";
 
@@ -23,6 +26,8 @@ interface SearchBoxProps {
 
 export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Element {
 	const router = useRouter();
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
@@ -181,7 +186,10 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 		setCanSend(false);
 	}
 
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const handleUrlChange = () => {
+		setPlaceholder("");
+		setIsCleared(true);
+	}
 
 	return (
 		<div 
@@ -219,8 +227,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 					if (event.key === "Enter") {
 						event.preventDefault();
 						sendQuery();
-						setPlaceholder("");
-						setIsCleared(true);
+						handleUrlChange();
 					}
 				}}
 			/>

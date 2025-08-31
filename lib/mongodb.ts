@@ -1,7 +1,7 @@
 //
 // Filename: mongodb.ts
 // Description: Interface with MongoDB
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import { MongoClient } from "mongodb";
