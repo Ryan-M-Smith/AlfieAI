@@ -1,7 +1,7 @@
 //
 // Filename: search-results.tsx
 // Description: Search results for the people search
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";

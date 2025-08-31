@@ -1,7 +1,7 @@
 //
 // Filename: navbar.tsx
 // Description: The website's navigation bar
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";

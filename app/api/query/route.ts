@@ -1,7 +1,7 @@
 //
 // Filename: route.ts
 // Route: /api/query
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { NextResponse } from "next/server";

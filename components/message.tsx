@@ -1,7 +1,7 @@
 //
 // Filename: chat-bubble.tsx
 // Description: A chat bubble
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { JSX, ReactNode } from "react";

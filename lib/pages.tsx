@@ -1,7 +1,7 @@
 //
 // Filename: pages.tsx
 // Description: Model the website's pages for dynamic navigation via the navbar
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 import { BsAsterisk } from "react-icons/bs";
