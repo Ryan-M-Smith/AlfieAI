@@ -27,7 +27,7 @@ interface SearchBoxProps {
 export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Element {
 	const router = useRouter();
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
-
+	
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
 	const [placeholder, setPlaceholder] = useState<string>("");
