@@ -129,7 +129,6 @@
 ## v4.0.0 - 8/31/25
 
 * Introducing AlfieAI Live - a live, interactive chatbot powered by the Gemini Live API
-
   * 3D Audio visualizer
     * May require browser hardware acceleration
     * Performance on desktop Safari is not guaranteed
