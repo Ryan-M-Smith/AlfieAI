@@ -1,6 +1,6 @@
 {
   "name": "alfie-ai",
-  "version": "3.0.3",
+  "version": "4.0.0",
   "private": true,
   "author": {
     "name": "Ryan Smith",
@@ -48,7 +48,8 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "resend": "^6.0.1",
-    "smartquotes-ts": "^0.0.2",
+    "smartquotes": "^2.3.2",
+    "three": "^0.179.1",
     "vanilla-cookieconsent": "^3.1.0"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 //
 // Filename: cookie-consent.tsx
 // Description: AlfieAI's cookie consent component
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 "use client"

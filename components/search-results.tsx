@@ -1,7 +1,7 @@
 //
 // Filename: search-results.tsx
 // Description: Search results for the people search
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 "use client";
@@ -9,7 +9,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Spinner } from "@heroui/spinner";
-import smartquotes from "smartquotes-ts";
+import smartquotes from "smartquotes";
 import { FaLinkedin } from "react-icons/fa";
 import Link from "next/link";
 

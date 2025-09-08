@@ -125,3 +125,20 @@
   * Added a mobile-friendly version of the back button on the policy pages
   * Formatted the policy link bar to be fully visible
 * Fixed an issue causing list text to render below the bullet point
+
+## v4.0.0 - 8/31/25
+
+* Introducing AlfieAI Live - a live, interactive chatbot powered by the Gemini Live API
+  * 3D Audio visualizer
+    * May require browser hardware acceleration
+    * Performance on desktop Safari is not guaranteed
+  * Near-instant feedback to any question
+  * Targeted, accurate, high-quality audio responses
+* General sitewide maintenance
+  * Switched from `smartquotes-ts` (removed from NPM) to `smartquotes.js`
+  * Added visible disclaimers about AI generated content on the Chat and Live pages
+* AlfieAI People
+  * The site title in the browser now matches the convention of the rest of the site
+* Navbar
+  * A lighter font weight is now used for `AlfieAI`. I feel like this does a better job of highlighting
+    the name of the tool instead of the branding.

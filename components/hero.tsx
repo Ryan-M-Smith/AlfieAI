@@ -1,7 +1,7 @@
 //
 // Filename: hero.tsx
 // Description: A hero component for the website
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 "use client";

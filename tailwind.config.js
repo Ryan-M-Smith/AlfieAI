@@ -14,6 +14,8 @@ const config = {
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
         cursive: ["var(--font-cursive)"],
+        big: ["var(--font-big)"],
+        bubble: ["var(--font-bubble)"],
       },
       typography: (theme) => ({
         DEFAULT: {

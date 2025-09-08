@@ -1,7 +1,7 @@
 //
 // Filename: chat-container.tsx
 // Description: A container for chat bubbles
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import { JSX, ReactElement } from "react";

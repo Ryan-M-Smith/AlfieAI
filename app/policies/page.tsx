@@ -1,14 +1,14 @@
 //
 // Filename: page.tsx
 // Route: /policies/disclaimers
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import { Button } from "@heroui/button";
 import { JSX } from "react";
 import Link from "next/link";
 import { PiGavelFill } from "react-icons/pi";
-import smartquotes from "smartquotes-ts";
+import smartquotes from "smartquotes";
 
 import Navbar from "@/components/navbar";
 
