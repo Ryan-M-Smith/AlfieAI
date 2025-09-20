@@ -143,6 +143,12 @@
   * A lighter font weight is now used for `AlfieAI`. I feel like this does a better job of highlighting
     the name of the tool instead of the branding.
 
+## v4.0.1 - 9/19/25
+
+* General bug fixes
+  * Updated harm block thresholds to hopefully avoid certain responses
+  * Updated how links are formatted in chat responses
+
 ## v5.0.0 - 2/2/26
 
 * Introducing AlfieAI Presence - the AI expert on Involve to help you manage your RSO.
@@ -158,3 +164,4 @@
   * All chat models now use Gemini 3 Flash
   * All model prompts are now stored in `/prompts` and loaded dynamically
   * Responses are being tested with a chunk-style API to see if it improves response speed
+
