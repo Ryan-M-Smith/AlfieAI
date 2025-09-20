@@ -10,9 +10,7 @@ import {
 } from "@google/genai";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const modelID = "gemini-2.5-flash-preview-05-20";
-
+const modelID = "gemini-2.5-flash";
 const context = {
 	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
 			Juniata College. Make sure to be as accurate as possible and use the internet
@@ -30,22 +28,22 @@ const modelConfig: GenerateContentConfig = {
 	safetySettings: [
 		{
 			category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-			threshold: HarmBlockThreshold.OFF,
+			threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
 		},
 
 		{
 			category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-			threshold: HarmBlockThreshold.OFF,
+			threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
 		},
 
 		{
 			category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-			threshold: HarmBlockThreshold.OFF,
+			threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
 		},
 
 		{
 			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-			threshold: HarmBlockThreshold.OFF,
+			threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
 		}
 	] satisfies SafetySetting[],
 
