@@ -142,3 +142,9 @@
 * Navbar
   * A lighter font weight is now used for `AlfieAI`. I feel like this does a better job of highlighting
     the name of the tool instead of the branding.
+
+## v4.0.1 - 9/19/25
+
+* General bug fixes
+  * Updated harm block thresholds to hopefully avoid certain responses
+  * Updated how links are formatted in chat responses
