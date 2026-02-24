@@ -1,12 +1,12 @@
 //
-// Filename: middleware.ts
+// Filename: proxy.ts
 // Description: Handle subdomain routing for the app
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import { NextRequest, NextResponse } from "next/server"
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
 	const hostname = req.headers.get("host") || ""
 	const url = req.nextUrl.clone()
 
