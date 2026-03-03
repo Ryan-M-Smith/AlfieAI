@@ -150,7 +150,10 @@
   * Provides clear answers with step-by-step instructions to follow on the website
   * Correctly guides students through countless scenarios
   * Refers students to human sources as necessary
-* "Features" are now called "Tools" in the UI
+* Small visual changes
+  * "Features" are now called "Tools" in the UI
+  * Loading spinners are now dots, and color-coded to their respective pages
 * Models
   * A new Events model was added
   * All model prompts are now stored in `/prompts` and loaded dynamically
+  * Responses are being tested with a chunk-style API to see if it improves response speed
