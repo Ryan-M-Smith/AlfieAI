@@ -142,3 +142,15 @@
 * Navbar
   * A lighter font weight is now used for `AlfieAI`. I feel like this does a better job of highlighting
     the name of the tool instead of the branding.
+
+## v5.0.0 - 2/2/26
+
+* Introducing AlfieAI Presence - the AI expert on Involve to help you manage your RSO.
+  * Fully-featured chatbot to help you learn and navigate Juniata's Involve platform
+  * Provides clear answers with step-by-step instructions to follow on the website
+  * Correctly guides students through countless scenarios
+  * Refers students to human sources as necessary
+* "Features" are now called "Tools" in the UI
+* Models
+  * A new Events model was added
+  * All model prompts are now stored in `/prompts` and loaded dynamically
