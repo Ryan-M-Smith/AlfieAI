@@ -17,15 +17,15 @@ interface MarkdownRendererProps {
 export default function MarkdownRenderer({ content }: MarkdownRendererProps): JSX.Element {
 	return (
 		<span className={`
-			prose text-default-foreground prose-p:my-4 prose-p:leading-snug prose-li:my-0.5
-			prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5
+			prose text-default-foreground prose-p:my-0 prose-p:leading-snug prose-li:my-0
+			prose-ul:leading-snug prose-ul:my-0 prose-ol:leading-snug prose-ol:my-0 prose-li:leading-snug prose-ul:pl-5
 			prose-li:pl-0 prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary
-			prose-headings:text-default-foreground prose-strong:text-default-foreground
+			prose-headings:text-default-foreground prose-headings:my-0 prose-strong:text-default-foreground
 			prose-strong:font-bold prose-headings:leading-none prose-code:font-mono
 			prose-li:marker:text-default-foreground prose-h1:text-center
 			prose-blockquote:border-l-4 prose-blockquote:border-default prose-blockquote:pl-4
 			prose-blockquote:italic prose-blockquote:text-foreground-500 prose-blockquote:bg-foreground/10
-			prose-blockquote:my-4 prose-blockquote:py-2 break-words
+			prose-blockquote:my-0 prose-blockquote:py-2 wrap-break-word
 		`}>
 			<Markdown
 				remarkPlugins={[remarkGfm]}
