@@ -8,11 +8,11 @@ import { NextResponse } from "next/server";
 
 import { generateWithChunking } from "@/lib/events-model";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
 	const { query } = await request.json();
-	const stream = await generateWithChunking(query, 30);
+	const stream = await generateWithChunking(query, 5);
 
 	return new NextResponse(stream, {
 		headers: {
