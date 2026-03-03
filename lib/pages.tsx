@@ -10,6 +10,7 @@ import { IoChatboxEllipses } from "react-icons/io5";
 import { MdOutlineContactSupport } from "react-icons/md";
 import { PiGavelFill } from "react-icons/pi";
 import { ReactNode } from "react";
+import { TbTimelineEventText } from "react-icons/tb";
 
 export interface Page {
 	href: 			string;
@@ -21,13 +22,13 @@ export interface Page {
 export type PageLayout = Record<string, Record<string, Page>>;
 
 export const pages: PageLayout = {
-	features: {
+	tools: {
 		chat: {
 			href: "/",
 			name: "chat",
 			description: "Chat with AlfieAI",
 			card: (
-				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-medium tracking-tight">
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<IoChatboxEllipses size={15}/>
 					<span className="text-primary font-bold">
@@ -42,7 +43,7 @@ export const pages: PageLayout = {
 			name: "people",
 			description: "Search Juniata's network of students and professionals",
 			card: (
-				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-medium tracking-tight">
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<BsAsterisk size={15}/>
 					<span className="text-yellow-500 dark:text-yellow-300 font-serif font-thin">
@@ -57,7 +58,7 @@ export const pages: PageLayout = {
 			name: "live",
 			description: "Experience a live audio chat with AlfieAI",
 			card: (
-				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-medium tracking-tight">
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<FaMicrophone size={15}/>
 					<span className="text-red-500 font-big font-thin">
@@ -65,7 +66,22 @@ export const pages: PageLayout = {
 					</span>
 				</span>
 			)
-		}
+		},
+
+		events: {
+			href: "/events",
+			name: "events",
+			description: "Get targeted help with Precense/Involve",
+			card: (
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
+					AlfieAI
+					<TbTimelineEventText size={15}/>
+					<span className="text-purple-500 font-racing">
+						Events
+					</span>
+				</span>
+			)
+		},
 	},
 
 	info: {
@@ -74,7 +90,7 @@ export const pages: PageLayout = {
 			name: "policies",
 			description: "The stuff we have to write and you don't want to read",
 			card: (
-				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-medium tracking-tight">
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<PiGavelFill size={15}/>
 					<span className="text-orange-500 font-light font-mono">
@@ -89,7 +105,7 @@ export const pages: PageLayout = {
 			name: "contact",
 			description: "Contact the AlfieAI team",
 			card: (
-				<span className="flex flex-row justify-center items-center gap-1 text-2xl font-medium tracking-tight">
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<MdOutlineContactSupport size={15}/>
 					<span className="text-lime-500 font-bold font-cursive">
