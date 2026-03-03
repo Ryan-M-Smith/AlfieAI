@@ -13,10 +13,11 @@ import { Textarea } from "@heroui/input";
 
 interface InputBarProps {
 	className?: string;
+	placeholder?: string;
 	onSubmit: 	(value: string) => void;
 }
 
-export default function InputBar({ className, onSubmit }: InputBarProps): JSX.Element {
+export default function InputBar({ className, placeholder, onSubmit }: InputBarProps): JSX.Element {
 	const [query, setQuery] = useState<string>("");
 	const [canSend, setCanSend] = useState<boolean>(false);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -90,7 +91,7 @@ export default function InputBar({ className, onSubmit }: InputBarProps): JSX.El
 					radius="full"
 					variant="faded"
 					size="lg"
-					placeholder="Enter a prompt..."
+					placeholder={placeholder || "Enter a prompt..."}
 					value={query}
 					endContent={ <SendButton/> }
 
