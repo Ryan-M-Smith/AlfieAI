@@ -6,13 +6,13 @@
 
 import { NextResponse } from "next/server";
 
-import { generate } from "@/lib/gemini-model";
+import { generateWithChunking } from "@/lib/chat-model";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
 	const { query } = await request.json();
-	const stream = await generate(query);
+	const stream = await generateWithChunking(query, 5);
 
 	return new NextResponse(stream, {
 		headers: {

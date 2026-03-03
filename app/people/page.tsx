@@ -25,9 +25,9 @@ export default function People(): JSX.Element {
 					<div className="flex flex-col gap-y-4">
 						<h1 className="text-5xl sm:text-7xl flex justify-center items-center text-center">
 							<span className="flex flex-row justify-center items-center gap-2 sm:gap-3">
-								<span>AlfieAI</span>
+								<span> AlfieAI </span>
 								<BsAsterisk size={40}/>
-								<span className="font-serif">People</span>
+								<span className="font-serif"> People </span>
 							</span>
 						</h1>
 

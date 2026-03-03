@@ -15,7 +15,7 @@ import Message from "@/components/message";
 import ChatContainer from "@/components/chat-container";
 import InputBar from "@/components/input-bar";
 import Hero from "@/components/hero";
-import Navbar from "@/components//navbar";
+import Navbar from "@/components/navbar";
 import { Button } from "@heroui/button";
 
 interface MessageData {
@@ -265,6 +265,11 @@ export default function ChatView(): JSX.Element {
 											role={isUser? "user" : "model"}
 											isLoading={isLoading}
 											isFirst={isUser && i === 0}
+
+											spinner={{ 
+												color: "primary",
+												variant: "dots"
+											}}
 										>
 											{content}
 										</Message>

@@ -32,12 +32,12 @@ export default function Navbar(): JSX.Element {
 		return () => window.removeEventListener("resize", checkMobile);
 	}, []);
 
-	const page = getPage(pathname) ?? pages.features.chat;
-	const { features, info } = pages;
+	const page = getPage(pathname) ?? pages.tools.chat;
+	const { tools, info } = pages;
 
 	const BackButton = () => isMobile? (
 		<Button
-			className="fixed left-2 top-[7rem] w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pr-1"
+			className="fixed left-2 top-28 w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pr-1"
 			size={"md"}
 			radius="full"
 			variant="ghost"
@@ -73,8 +73,8 @@ export default function Navbar(): JSX.Element {
 						</DropdownTrigger>
 
 						<DropdownMenu aria-label="Static Actions" disabledKeys={ [page.name] }>
-							<DropdownSection title="Features">
-								{ Object.values(features).map((page: Page) => (
+							<DropdownSection title="Tools">
+								{ Object.values(tools).map((page: Page) => (
 									<DropdownItem 
 										key={page.name} 
 										href={page.href}
@@ -110,7 +110,7 @@ export default function Navbar(): JSX.Element {
 							className={`
 								flex items-center justify-center rounded-[10px]
 								text-black bg-white border-black border-2 dark:border-none p-0
-								w-[40px] h-[40px] min-w-[40px] min-h-[40px]
+								w-10 h-10 min-w-10 min-h-10
 							`}
 							variant="flat"
 							startContent={ <BsGithub size={30} className="mx-auto" /> }
@@ -118,7 +118,7 @@ export default function Navbar(): JSX.Element {
 						/>
 					</Link>
 
-					<div className="border-r-1 border-default-400"/>
+					<div className="border-r border-default-400"/>
 
 					<Link href="/">
 						<Image

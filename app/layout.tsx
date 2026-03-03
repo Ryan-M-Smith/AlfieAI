@@ -13,7 +13,7 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
-import { fontBig, fontBubble, fontCursive, fontMono, fontSans } from "@/config/fonts";
+import { fontBig, fontBubble, fontRacing, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 import React from "react";
@@ -40,11 +40,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	const fonts = `
-		${fontSans.variable}
-		${fontMono.variable}
-		${fontCursive.variable}
 		${fontBig.variable}
 		${fontBubble.variable}
+		${fontRacing.variable}
+		${fontCursive.variable}
+		${fontMono.variable}
+		${fontSans.variable}
 	`;
 
 	return (
