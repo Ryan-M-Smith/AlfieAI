@@ -276,13 +276,19 @@ export default function EventsChatView(): JSX.Element {
 								return (
 									<div key={i} className="w-full">
 										<Message
-											bubbleColor={{
-												light: "bg-purple-300",
-												dark: "dark:bg-purple-900"
-											}}
 											role={isUser? "user" : "model"}
 											isLoading={isLoading}
 											isFirst={isUser && i === 0}
+
+											bubble={{
+												light: "bg-purple-300",
+												dark: "dark:bg-purple-900"
+											}}
+
+											spinner={{
+												color: "secondary",
+												variant: "dots"
+											}}
 										>
 											{content}
 										</Message>
