@@ -164,4 +164,3 @@
   * All chat models now use Gemini 3 Flash
   * All model prompts are now stored in `/prompts` and loaded dynamically
   * Responses are being tested with a chunk-style API to see if it improves response speed
-
