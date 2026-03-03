@@ -7,23 +7,43 @@
 import { JSX, ReactNode } from "react";
 import { Spinner } from "@heroui/spinner";
 
+type SpinnerColor = "primary" | "secondary" | "current" | "white" | "default" | "success" | "warning" | "danger" | undefined;
+type SpinnerVariant = "spinner" | "default" | "wave" | "dots" | "gradient" | "simple" | undefined;
+
+interface SpinnerProps {
+	color: 	 SpinnerColor;
+	variant: SpinnerVariant;
+}
+
+interface BubbleProps {
+	light: 	string;
+	dark: 	string;
+}
+
 interface MessageProps {
 	className?: 	string;
-	bubbleColor?: 	{ light: string, dark: string };
+	bubble?: 	BubbleProps;
+	spinner?: 		SpinnerProps;
 	children?: 		ReactNode;
 	role?: 			"user" | "model";
 	isLoading?: 	boolean;
 	isFirst?: 		boolean;
 }
 
-export default function Message({ className, bubbleColor, children, role, isLoading, isFirst = false }: MessageProps): JSX.Element {
-	const defaultColors = {
+export default function Message({ className, bubble, spinner, children, role, isLoading, isFirst = false }: MessageProps): JSX.Element {
+	const defaultBubble = {
 		light: "bg-blue-100",
 		dark: "dark:bg-default-100"
-	};
+	} satisfies BubbleProps;
 	
-	const { light, dark } = bubbleColor || defaultColors;
-	
+	const defaultSpinner = {
+		color: "primary",
+		variant: "wave"
+	} satisfies SpinnerProps;
+
+	const { light, dark } 	 = bubble  || defaultBubble;
+	const { color, variant } = spinner || defaultSpinner;
+
 	const User = ({ children }: { children: ReactNode }) => {
 		return (
 			<div className={`${className} flex flex-col w-full justify-end px-2 sm:px-4 mt-4 mb-1`} data-role="user">
@@ -46,8 +66,8 @@ export default function Message({ className, bubbleColor, children, role, isLoad
 								<Spinner
 									className="flex justify-center items-center"
 									label="AlfieAI is thinking"
-									color="primary"
-									variant="wave"
+									color={color}
+									variant={variant}
 								/>
 							) : children}
 						</div>
@@ -59,15 +79,16 @@ export default function Message({ className, bubbleColor, children, role, isLoad
 
 	const Model = ({ children }: { children: ReactNode }) => {
 		return (
-			<div className="flex w-full justify-center px-2 sm:px-4 my-4" data-role="model">
+			<div className={`flex w-full justify-center px-2 sm:px-4 my-4`} data-role="model">
 				<div className="text-left text-base sm:text-lg text-zinc-100 whitespace-pre-line">
 					{isLoading ? (
-						<Spinner
-							className="flex justify-start items-center"
-							label="AlfieAI is thinking"
-							color="primary"
-							variant="gradient"
-						/>
+						<div className="flex gap-x-1 justify-start items-start">
+							<p className="text-lg"> AlfieAI is thinking </p>
+							<Spinner
+								color={color}
+								variant={variant}
+							/>
+						</div>
 					) : children}
 				</div>
 			</div>
