@@ -8,14 +8,22 @@ import { JSX, ReactNode } from "react";
 import { Spinner } from "@heroui/spinner";
 
 interface MessageProps {
-	className?: string;
-	children?: 	ReactNode;
-	role?: 		"user" | "model";
-	isLoading?: boolean;
-	isFirst?: 	boolean;
+	className?: 	string;
+	bubbleColor?: 	{ light: string, dark: string };
+	children?: 		ReactNode;
+	role?: 			"user" | "model";
+	isLoading?: 	boolean;
+	isFirst?: 		boolean;
 }
 
-export default function Message({ className, children, role, isLoading, isFirst = false }: MessageProps): JSX.Element {
+export default function Message({ className, bubbleColor, children, role, isLoading, isFirst = false }: MessageProps): JSX.Element {
+	const defaultColors = {
+		light: "bg-blue-100",
+		dark: "dark:bg-default-100"
+	};
+	
+	const { light, dark } = bubbleColor || defaultColors;
+	
 	const User = ({ children }: { children: ReactNode }) => {
 		return (
 			<div className={`${className} flex flex-col w-full justify-end px-2 sm:px-4 mt-4 mb-1`} data-role="user">
@@ -30,7 +38,10 @@ export default function Message({ className, children, role, isLoading, isFirst 
 				<div className="flex justify-end w-full">
 					<div className={`flex flex-col items-end relative max-w-[85%] sm:max-w-[75%]`}>
 						{/* Bubble */}
-						<div className="rounded-[16px] rounded-tr-none dark:bg-default-100 bg-blue-100 px-3 sm:px-5 py-2 w-full break-words whitespace-normal overflow-hidden">
+						<div className={`
+							rounded-2xl rounded-tr-none ${light} ${dark} px-3 sm:px-5 py-2
+							w-full wrap-break-word whitespace-normal overflow-hidden`
+						}>
 							{isLoading ? (
 								<Spinner
 									className="flex justify-center items-center"
