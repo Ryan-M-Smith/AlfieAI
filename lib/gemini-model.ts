@@ -11,7 +11,7 @@ import {
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const modelID = "gemini-2.5-flash-preview-05-20";
+const modelID = "gemini-3-flash-preview";
 
 const context = {
 	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
@@ -25,7 +25,7 @@ const modelConfig: GenerateContentConfig = {
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
-	tools: [{ googleSearch: true }],
+	tools: [{ googleSearch: {} }],
 
 	safetySettings: [
 		{
