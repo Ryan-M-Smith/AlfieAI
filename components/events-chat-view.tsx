@@ -266,19 +266,19 @@ export default function EventsChatView(): JSX.Element {
 			<main className="flex-1 flex flex-col relative overflow-hidden">
 				<div
 					ref={divRef}
-					className={`absolute inset-0 px-4 sm:px-8 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
+					className={`absolute inset-0 px-4 sm:px-4 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
 				>
 					{messages.length === 0 ? (
 						<div className="flex flex-col items-center justify-center h-full text-center gap-y-2">
 							<h2 className={`
 								text-3xl font-racing bg-linear-to-r from-purple-400 via-fuchsia-400
 								to-pink-400 text-transparent bg-clip-text bg-size-[200%_200%]
-								animate-gradient-move
+								animate-gradient-move pb-20 sm:pb-0 
 							`}>
 								{greeting}
 							</h2>
 							
-							<InputBar onSubmit={setQuery}/>
+							<InputBar placeholder="Ask AlfieAI Events..." onSubmit={setQuery}/>
 						</div>
 					) : (
 						<ChatContainer className="space-y-4 sm:pb-20 pb-32">
@@ -315,7 +315,7 @@ export default function EventsChatView(): JSX.Element {
 				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton/>}
 			</main>
 
-			{ messages.length > 0 && <InputBar onSubmit={setQuery}/> }
+			{ messages.length > 0 && <InputBar placeholder="Ask AlfieAI Events..." onSubmit={setQuery}/> }
 		</div>
 	);
 }
