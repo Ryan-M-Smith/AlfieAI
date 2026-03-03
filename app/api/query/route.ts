@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-import { generate } from "@/lib/gemini-model";
+import { generate } from "@/lib/chat-model";
 
 export const maxDuration = 30;
 

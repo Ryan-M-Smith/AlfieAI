@@ -4,6 +4,7 @@
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
+import * as fs from "node:fs";
 import {
 	CreateChatParameters, GenerateContentConfig, GoogleGenAI,
 	HarmBlockThreshold, HarmCategory, SafetySetting
@@ -14,10 +15,7 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const modelID = "gemini-3-flash-preview";
 
 const context = {
-	text:  `You are AlfieAI - an AI model designed to give targeted, accurate information about
-			Juniata College. Make sure to be as accurate as possible and use the internet
-			if you can't find relevant or correct answers. Render responses in markdown, with
-			headings, bullet points and lists when possible. Prefer listing information when you can.`,
+	text:  fs.readFileSync("prompts/chat.prompt", "utf-8")
 };
   
 const modelConfig: GenerateContentConfig = {
