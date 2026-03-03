@@ -265,6 +265,11 @@ export default function ChatView(): JSX.Element {
 											role={isUser? "user" : "model"}
 											isLoading={isLoading}
 											isFirst={isUser && i === 0}
+
+											spinner={{ 
+												color: "primary",
+												variant: "dots"
+											}}
 										>
 											{content}
 										</Message>
