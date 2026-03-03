@@ -22,7 +22,7 @@ interface BubbleProps {
 
 interface MessageProps {
 	className?: 	string;
-	bubble?: 	BubbleProps;
+	bubble?: 		BubbleProps;
 	spinner?: 		SpinnerProps;
 	children?: 		ReactNode;
 	role?: 			"user" | "model";
