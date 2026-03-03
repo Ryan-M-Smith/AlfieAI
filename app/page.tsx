@@ -7,7 +7,7 @@
 import ChatView from "@/components/chat-view";
 
 export const metadata = {
-	title: "Chat | AlfieAI",
+	title: "Chat",
 	description: "Chat with AlfieAI - the AI expert on Juniata College"
 };
 

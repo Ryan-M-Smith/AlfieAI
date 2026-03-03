@@ -7,7 +7,7 @@
 import EventsChatView from "@/components/events-chat-view";
 
 export const metadata = {
-	title: "Events | AlfieAI",
+	title: "Events",
 	description: "Get targeted help with Juniata's Involve platform"
 };
 
