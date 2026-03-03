@@ -201,6 +201,18 @@ export default function EventsChatView(): JSX.Element {
 	const greetings = [
 		"Get help using Involve!",
 		"Ready to get you Involve-d on campus.",
+		"Juniata Involve questions? I can walk you through every step.",
+		"Need Presence tips for club events or attendance? Ask away!",
+		"Let's make your Juniata events shine! how can I help with Involve?",
+		"Curious which Campus Forms to use in Presence? I'm here for you.",
+		"Planning a club event? I can guide you through the Juniata Presence forms.",
+		"Not sure where Event PINs live? I'll show you inside Involve.",
+		"Ask me how to track attendance in Presence like a pro.",
+		"From registration to feedback, I know every Juniata Presence workflow.",
+		"Let's explore Involve together - what do you need?",
+		"Need help submitting waivers or approvals? I speak Juniata Presence.",
+		"Welcome to the Juniata Events Assistant - ready to really use Involve?",
+		"Involve novice to instant expert"
 	];
 
 	const greeting = greetings[Math.floor(Math.random() * greetings.length)];
