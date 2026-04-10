@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Button, Form, Input, Textarea } from "@heroui/react";
+import { Button, Form, Input, TextArea } from "@heroui/react";
 import { JSX } from "react";
 import { useRouter } from "next/navigation";
 
@@ -84,7 +84,7 @@ export default function ContactForm(): JSX.Element {
 					required
 				/>
 
-				<Textarea
+				<TextArea
 					label="Message"
 					name="message"
 					variant="bordered"
