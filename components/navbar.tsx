@@ -125,7 +125,7 @@ export default function Navbar(): JSX.Element {
 						</Button>
 					)}
 
-					<Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
+					{/* <Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
 						<Button
 							className={`
 								flex items-center justify-center rounded-[10px]
@@ -148,7 +148,7 @@ export default function Navbar(): JSX.Element {
 							width={40}
 							height={40}
 						/>
-					</Link>
+					</Link> */}
 				</div>
 			</header>
 		</>
