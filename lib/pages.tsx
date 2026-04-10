@@ -62,7 +62,7 @@ export const pages: PageLayout = {
 				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-bold tracking-tight">
 					AlfieAI
 					<GrSchedules size={15}/>
-					<span className="text-purple-400 font-chalkboard font-normal">
+					<span className="text-purple-500 font-chalkboard font-normal">
 						Courses
 					</span>
 				</span>

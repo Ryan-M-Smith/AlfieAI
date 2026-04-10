@@ -18,6 +18,80 @@ interface CatalogFilters {
 	maxCredits?: number;
 }
 
+interface ProfessorNameRecord {
+	firstName?: string;
+	lastName?: string;
+}
+
+function normalizeWhitespace(value: string): string {
+	return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeNameToken(value: string): string {
+	return normalizeWhitespace(value)
+		.toLowerCase()
+		.replace(/[^a-z\s]/g, "")
+		.trim();
+}
+
+function buildInstructorLookup(professors: ProfessorNameRecord[]): Map<string, string> {
+	const lookup = new Map<string, string>();
+
+	for (const professor of professors) {
+		const firstRaw = normalizeWhitespace(String(professor.firstName || ""));
+		const lastRaw = normalizeWhitespace(String(professor.lastName || ""));
+		if (!firstRaw || !lastRaw) {
+			continue;
+		}
+
+		const firstToken = normalizeNameToken(firstRaw).split(" ")[0] || "";
+		const lastToken = normalizeNameToken(lastRaw).split(" ")[0] || "";
+		if (!firstToken || !lastToken) {
+			continue;
+		}
+
+		const fullName = `${firstRaw} ${lastRaw}`;
+		lookup.set(`${firstToken} ${lastToken}`, fullName);
+
+		const initial = firstToken.charAt(0);
+		if (initial) {
+			lookup.set(`${initial} ${lastToken}`, fullName);
+		}
+	}
+
+	return lookup;
+}
+
+function instructorLookupKey(value: string): string {
+	const stripped = normalizeWhitespace(value)
+		.replace(/^(dr\.?|prof\.?|professor)\s+/i, "")
+		.replace(/[^a-zA-Z\s]/g, " ")
+		.replace(/\s+/g, " ")
+		.trim()
+		.toLowerCase();
+
+	if (!stripped) {
+		return "";
+	}
+
+	const parts = stripped.split(" ").filter(Boolean);
+	if (parts.length < 2) {
+		return "";
+	}
+
+	const first = parts[0];
+	const last = parts[parts.length - 1];
+	if (!first || !last) {
+		return "";
+	}
+
+	if (first.length === 1) {
+		return `${first} ${last}`;
+	}
+
+	return `${first} ${last}`;
+}
+
 export async function POST(request: NextRequest) {
 	const body = await request.json();
 	const query = (body.query || "").trim();
@@ -28,6 +102,7 @@ export async function POST(request: NextRequest) {
 	const client = await clientPromise;
 	const db = client.db(process.env.MONGODB_COURSES_DB || "VectorDB");
 	const collection = db.collection(process.env.MONGODB_COURSES_COLLECTION || "courses");
+	const professorsCollection = db.collection<ProfessorNameRecord>(process.env.MONGODB_PROFESSORS_COLLECTION || "professors");
 
 	const match: Record<string, unknown> = {};
 
@@ -126,8 +201,48 @@ export async function POST(request: NextRequest) {
 
 	const total = result?.totalCount?.[0]?.count || 0;
 
+	const professorNameDocs = await professorsCollection
+		.find({}, { projection: { _id: 0, firstName: 1, lastName: 1 } })
+		.toArray();
+	const instructorLookup = buildInstructorLookup(professorNameDocs);
+
+	const mappedResults = (result?.results || []).map((course: Record<string, unknown>) => {
+		const sections = Array.isArray(course.sections) ? course.sections : [];
+
+		const mappedSections = sections.map((section) => {
+			const typedSection = section as Record<string, unknown>;
+			const instructors = Array.isArray(typedSection.instructors) ? typedSection.instructors : [];
+
+			const mappedInstructors = instructors.map((instructor) => {
+				const typedInstructor = instructor as Record<string, unknown>;
+				const rawName = String(typedInstructor.name || "");
+				const key = instructorLookupKey(rawName);
+				const resolvedName = key ? instructorLookup.get(key) : undefined;
+
+				if (!resolvedName) {
+					return instructor;
+				}
+
+				return {
+					...typedInstructor,
+					name: resolvedName,
+				};
+			});
+
+			return {
+				...typedSection,
+				instructors: mappedInstructors,
+			};
+		});
+
+		return {
+			...course,
+			sections: mappedSections,
+		};
+	});
+
 	return NextResponse.json({
-		results: result?.results || [],
+		results: mappedResults,
 		pagination: {
 			page,
 			pageSize,

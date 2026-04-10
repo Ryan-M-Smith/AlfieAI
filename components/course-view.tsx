@@ -293,6 +293,18 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 				</div>
 			)}
 
+			{loadingInsights && (
+				<div className="mt-4 rounded-lg border border-secondary-200 bg-secondary-50/60 p-3">
+					<p className="text-xs font-semibold uppercase tracking-wide text-secondary-700">AlfieAI is thinking</p>
+					<p className="mt-1 text-sm text-secondary-900">Reviewing enrollment trends, requisites, and scheduling patterns to build useful guidance.</p>
+					<div className="mt-2 inline-flex items-center gap-1.5" aria-hidden="true">
+						<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce" />
+						<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce [animation-delay:120ms]" />
+						<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce [animation-delay:240ms]" />
+					</div>
+				</div>
+			)}
+
 			<div className="mt-4">
 				<Accordion
 					className="px-0!"
@@ -314,6 +326,7 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 							const capacity = section.availability?.capacity || 0;
 							const waitlisted = section.availability?.waitlisted || 0;
 							const sectionTone = enrollmentTone(available, capacity, waitlisted);
+							const instructorNames = (section.instructors || []).map((instructor) => instructor.name).filter(Boolean);
 
 							return (
 						<AccordionItem
@@ -337,7 +350,7 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 									</p>
 								))}
 								<p>
-									<strong>Instructors:</strong> {(section.instructors || []).map((instructor) => instructor.name).join(", ") || "TBA"}
+									<strong>{instructorNames.length === 1 ? "Instructor" : "Instructors"}:</strong> {instructorNames.join(", ") || "TBA"}
 								</p>
 							</div>
 						</AccordionItem>

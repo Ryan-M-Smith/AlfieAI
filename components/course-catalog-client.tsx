@@ -322,6 +322,7 @@ export default function CourseCatalogClient() {
 						<Button
 							size="md"
 							className="w-full"
+							radius="full"
 							variant={filters.openOnly ? "solid" : "flat"}
 							color={filters.openOnly ? "success" : "default"}
 							onPress={() => updateFilters({ openOnly: !filters.openOnly })}

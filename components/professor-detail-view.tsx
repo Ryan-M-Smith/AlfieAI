@@ -1,8 +1,11 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { useState } from "react";
+import { FaPhoneAlt } from "react-icons/fa";
 import { LuExternalLink, LuGraduationCap, LuSparkles } from "react-icons/lu";
+import { MdEmail } from "react-icons/md";
+import { useState } from "react";
+import { GrCatalogOption } from "react-icons/gr";
 
 interface Offering {
 	course_code: string;
@@ -87,10 +90,20 @@ export default function ProfessorDetailView({ professor, offeringsByTerm }: Prof
 						{professor.primaryTitle && <p className="text-sm text-default-500 mt-1">{professor.primaryTitle}</p>}
 
 						<div className="mt-3 flex flex-wrap gap-2 text-sm">
-							{professor.email && <a className="rounded-full bg-default-100 px-3 py-1" href={`mailto:${professor.email}`}>{professor.email}</a>}
-							{professor.phone && <a className="rounded-full bg-default-100 px-3 py-1" href={`tel:${professor.phone}`}>{professor.phone}</a>}
+							{professor.email && (
+								<a className="rounded-full bg-default-100 px-3 py-1 inline-flex items-center gap-1.5" href={`mailto:${professor.email}`}>
+									<MdEmail size={14} />
+									{professor.email}
+								</a>
+							)}
+							{professor.phone && (
+								<a className="rounded-full bg-default-100 px-3 py-1 inline-flex items-center gap-1.5" href={`tel:${professor.phone}`}>
+									<FaPhoneAlt size={12} />
+									{professor.phone}
+								</a>
+							)}
 							{professor.biographyUrl && (
-								<a className="rounded-full bg-secondary-100 text-secondary-700 px-3 py-1 inline-flex items-center gap-1" href={professor.biographyUrl} target="_blank" rel="noreferrer">
+								<a className="rounded-full bg-purple-500 text-white hover:bg-purple-600 dark:bg-secondary-100 dark:text-secondary-700 dark:hover:bg-secondary-200 transition-colors px-3 py-1 inline-flex items-center gap-1" href={professor.biographyUrl} target="_blank" rel="noreferrer">
 									Official Bio
 									<LuExternalLink size={13} />
 								</a>
@@ -123,9 +136,31 @@ export default function ProfessorDetailView({ professor, offeringsByTerm }: Prof
 					</Button>
 				</div>
 
+				{loadingInsights && (
+					<div className="mt-3 rounded-lg border border-secondary-200 bg-secondary-50/60 p-3">
+						<p className="text-xs font-semibold uppercase tracking-wide text-secondary-700">AlfieAI is thinking</p>
+						<p className="mt-1 text-sm text-secondary-900">Analyzing teaching history, term patterns, and catalog context to generate insights.</p>
+						<div className="mt-2 inline-flex items-center gap-1.5" aria-hidden="true">
+							<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce" />
+							<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce [animation-delay:120ms]" />
+							<span className="h-2 w-2 rounded-full bg-secondary-500 animate-bounce [animation-delay:240ms]" />
+						</div>
+					</div>
+				)}
+
 				{insights && (
-					<div className="mt-3 rounded-lg border border-secondary-200 bg-secondary-50/60 p-3 text-sm whitespace-pre-wrap">
-						{insights}
+					<div className="mt-3 rounded-lg border border-secondary-200 bg-secondary-50/60 p-3">
+						<div className="flex items-center justify-between gap-2">
+							<p className="text-xs font-semibold uppercase tracking-wide text-secondary-700">AlfieAI Insights</p>
+							<Button
+								size="sm"
+								variant="light"
+								onPress={() => setInsights("")}
+							>
+								Dismiss
+							</Button>
+						</div>
+						<p className="whitespace-pre-wrap text-sm mt-1 text-secondary-900">{insights}</p>
 					</div>
 				)}
 			</div>
@@ -152,9 +187,9 @@ export default function ProfessorDetailView({ professor, offeringsByTerm }: Prof
 										</span>
 										<a
 											href={`/courses/catalog?q=${encodeURIComponent(course.course_code)}`}
-											className="inline-flex items-center gap-1 rounded-full bg-secondary-100 px-2.5 py-1 text-xs font-medium text-secondary-700 hover:bg-secondary-200 transition-colors"
+											className="inline-flex items-center gap-1 rounded-full bg-purple-500 text-white hover:bg-purple-600 dark:bg-secondary-100 dark:text-secondary-700 dark:hover:bg-secondary-200 px-2.5 py-1 text-xs font-medium transition-colors"
 										>
-											<LuExternalLink size={12} />
+											<GrCatalogOption size={12} />
 											View in course catalog
 										</a>
 									</div>
