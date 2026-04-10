@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Accordion, AccordionItem } from "@heroui/accordion";
+import { Accordion, AccordionItem } from "@heroui/react/accordion";
 import { Button } from "@heroui/button";
 import { JSX } from "react";
 import Link from "next/link";

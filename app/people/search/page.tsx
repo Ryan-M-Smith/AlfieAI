@@ -35,7 +35,7 @@ export default function Search() {
 							<span className="flex flex-row justify-center items-center gap-2">
 								<span>AlfieAI</span>
 								<BsAsterisk size={40}/>
-								<span className="font-serif">People</span>
+								<span className="font-serif text-yellow-500 dark:text-yellow-300">People</span>
 							</span>
 						</h1>
 

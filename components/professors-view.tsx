@@ -2,7 +2,7 @@
 
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
+import { Select, SelectItem } from "@heroui/react";
 import { Spinner } from "@heroui/spinner";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
