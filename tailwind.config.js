@@ -1,4 +1,4 @@
-import { heroui } from "@heroui/theme";
+const { heroui } = require("@heroui/theme");
 
 /** @type {import('tailwindcss').Config} */
 const config = {
@@ -64,4 +64,4 @@ const config = {
   ]
 }
 
-export default config;
+module.exports = config;
