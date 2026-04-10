@@ -74,7 +74,6 @@ function termSemesterRank(term: string): number {
 	return 9;
 }
 
-async function getOfferingsByProfessor(params: {
 function buildOfferingsByTerm(rows: CourseOfferingRow[]): OfferingsByTerm[] {
 	const byTerm = new Map<string, Offering[]>();
 

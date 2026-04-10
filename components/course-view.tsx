@@ -351,9 +351,13 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 											</p>
 										))}
 										<p>
-											<strong>{instructorNames.length === 1 ? "Instructor" : "Instructors"}:</strong>
+											<strong>
+												{instructorNames.length === 1 ? "Instructor" : "Instructors"}:
+											</strong>
 											
-											<Link href={`/courses/professors/${instructorNames.join("-").toLowerCase()}`}> {instructorNames.join(", ") || "TBA"} </Link>
+											<Link href={`/courses/professors/${instructorNames.join("-").toLowerCase()}`}>
+												{instructorNames.join(", ") || "TBA"}
+											</Link>
 										</p>
 									</div>
 								</AccordionItem>

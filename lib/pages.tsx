@@ -92,7 +92,7 @@ export const pages: PageLayout = {
 				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<TbTimelineEventText size={15}/>
-					<span className="text-pink-700 font-racing">
+					<span className="text-pink-500 font-racing">
 						Events
 					</span>
 				</span>
