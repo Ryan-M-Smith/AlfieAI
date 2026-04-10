@@ -36,7 +36,7 @@ interface CatalogResponse {
 	};
 }
 
-const DEFAULT_FILTERS: CatalogFilters = {
+const defaultFilters: CatalogFilters = {
 	department: "",
 	term: "",
 	year: "",
@@ -66,7 +66,7 @@ export default function CourseCatalogClient() {
 	const searchParams = useSearchParams();
 	const [query, setQuery] = useState("");
 	const [searchInput, setSearchInput] = useState("");
-	const [filters, setFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
+	const [filters, setFilters] = useState<CatalogFilters>(defaultFilters);
 	const [courses, setCourses] = useState<Course[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -185,7 +185,9 @@ export default function CourseCatalogClient() {
 				});
 				setTotalPages(data.pagination.totalPages);
 				setTotalResults(data.pagination.total);
-				setFacets(data.facets);
+				if (page === 1 || facets.departments.length === 0) {
+					setFacets(data.facets);
+				}
 			}
 			catch (fetchError) {
 				if ((fetchError as Error).name === "AbortError") {
@@ -313,7 +315,7 @@ export default function CourseCatalogClient() {
 								setSearchInput("");
 								setQuery("");
 								setPage(1);
-								setFilters(DEFAULT_FILTERS);
+								setFilters(defaultFilters);
 							}}
 						>
 							Reset
@@ -423,7 +425,10 @@ export default function CourseCatalogClient() {
 			)}
 
 			{!loading && !error && courses.length === 0 && (
-				<p className="mt-6 text-center text-default-500">No courses matched your filters.</p>
+				<div className="flex flex-col mt-6 text-center text-default-500 gap-y-6">
+					<p> No courses matched your filters. </p>
+					<i className="text-default-200"> Note that courses with no registered sections will not be displayed. </i>
+				</div>
 			)}
 
 			<div className="mt-4 grid grid-cols-1 gap-4">

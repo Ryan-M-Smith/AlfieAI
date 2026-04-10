@@ -1,7 +1,7 @@
 //
 // Filename: course-view.tsx
 // Description: A display widget for course data and associated sections
-// Copyright (c) 2025 Ryan Smith, Adithya Kommi
+// Copyright (c) 2025 Ryan Smith
 //
 
 "use client";
@@ -9,6 +9,7 @@
 import { Accordion, AccordionItem } from "@heroui/accordion";
 import { Button } from "@heroui/button";
 import { JSX } from "react";
+import Link from "next/link";
 import { LuSparkles } from "react-icons/lu";
 
 import { Course } from "@/lib/models/course";
@@ -235,7 +236,7 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 						onPress={() => void onGenerateInsights(course)}
 						isLoading={loadingInsights}
 					>
-						AI insights
+						AlfieAI Insights
 					</Button>
 				</div>
 			</div>
@@ -329,31 +330,33 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 							const instructorNames = (section.instructors || []).map((instructor) => instructor.name).filter(Boolean);
 
 							return (
-						<AccordionItem
-							key={`${course._id}-${section.section_name}-${section.term}-${sectionIndex}`}
-							title={`Section ${sectionNumberInTerm} • ${section.term}`}
-							subtitle={`${available} seats open / ${capacity} capacity${waitlisted > 0 ? ` • ${waitlisted} waitlisted` : ""}`}
-						>
-							<div className="grid gap-2 text-sm">
-								<p>
-									<span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${sectionTone}`}>
-										Enrollment: {available > 0 ? "Open" : waitlisted > 0 ? "Waitlisted" : "Closed"}
-									</span>
-								</p>
-								<p><strong>Status:</strong> {section.status}</p>
-								{waitlisted > 0 && <p><strong>Waitlist:</strong> {waitlisted} student{waitlisted === 1 ? "" : "s"}</p>}
-								<p><strong>Dates:</strong> {prettyDate(section.start_date)} to {prettyDate(section.end_date)}</p>
-								<p><strong>Location:</strong> {section.location}</p>
-								{(section.meeting_info || []).map((meeting, meetingIndex) => (
-									<p key={`${course._id}-${section.section_name}-${sectionIndex}-meeting-${meetingIndex}`}>
-										<strong>Meeting {meetingIndex + 1}:</strong> {formatMeetingDays(meeting.days)} • {formatMeetingRange(meeting.start_time, meeting.end_time)} • {meeting.classroom}
-									</p>
-								))}
-								<p>
-									<strong>{instructorNames.length === 1 ? "Instructor" : "Instructors"}:</strong> {instructorNames.join(", ") || "TBA"}
-								</p>
-							</div>
-						</AccordionItem>
+								<AccordionItem
+									key={`${course._id}-${section.section_name}-${section.term}-${sectionIndex}`}
+									title={`Section ${sectionNumberInTerm} • ${section.term}`}
+									subtitle={`${available} seats open / ${capacity} capacity${waitlisted > 0 ? ` • ${waitlisted} waitlisted` : ""}`}
+								>
+									<div className="grid gap-2 text-sm">
+										<p>
+											<span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${sectionTone}`}>
+												Enrollment: {available > 0 ? "Open" : waitlisted > 0 ? "Waitlisted" : "Closed"}
+											</span>
+										</p>
+										<p><strong>Status:</strong> {section.status}</p>
+										{waitlisted > 0 && <p><strong>Waitlist:</strong> {waitlisted} student{waitlisted === 1 ? "" : "s"}</p>}
+										<p><strong>Dates:</strong> {prettyDate(section.start_date)} to {prettyDate(section.end_date)}</p>
+										<p><strong>Location:</strong> {section.location}</p>
+										{(section.meeting_info || []).map((meeting, meetingIndex) => (
+											<p key={`${course._id}-${section.section_name}-${sectionIndex}-meeting-${meetingIndex}`}>
+												<strong>Meeting {meetingIndex + 1}:</strong> {formatMeetingDays(meeting.days)} • {formatMeetingRange(meeting.start_time, meeting.end_time)} • {meeting.classroom}
+											</p>
+										))}
+										<p>
+											<strong>{instructorNames.length === 1 ? "Instructor" : "Instructors"}:</strong>
+											
+											<Link href={`/courses/professors/${instructorNames.join("-").toLowerCase()}`}> {instructorNames.join(", ") || "TBA"} </Link>
+										</p>
+									</div>
+								</AccordionItem>
 							);
 						})()
 					))}

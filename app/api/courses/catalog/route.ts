@@ -23,6 +23,18 @@ interface ProfessorNameRecord {
 	lastName?: string;
 }
 
+interface CatalogFacets {
+	departments: string[];
+	terms: string[];
+	academicLevels: string[];
+}
+
+const INSTRUCTOR_LOOKUP_TTL_MS = 5 * 60 * 1000;
+let instructorLookupCache: {
+	expiresAt: number;
+	value: Map<string, string>;
+} | null = null;
+
 function normalizeWhitespace(value: string): string {
 	return value.trim().replace(/\s+/g, " ");
 }
@@ -92,6 +104,26 @@ function instructorLookupKey(value: string): string {
 	return `${first} ${last}`;
 }
 
+async function getInstructorLookup(professorsCollection: ReturnType<typeof import("mongodb").Db.prototype.collection<ProfessorNameRecord>>) {
+	const now = Date.now();
+
+	if (instructorLookupCache && instructorLookupCache.expiresAt > now) {
+		return instructorLookupCache.value;
+	}
+
+	const professorNameDocs = await professorsCollection
+		.find({}, { projection: { _id: 0, firstName: 1, lastName: 1 } })
+		.toArray();
+
+	const lookup = buildInstructorLookup(professorNameDocs);
+	instructorLookupCache = {
+		expiresAt: now + INSTRUCTOR_LOOKUP_TTL_MS,
+		value: lookup,
+	};
+
+	return lookup;
+}
+
 export async function POST(request: NextRequest) {
 	const body = await request.json();
 	const query = (body.query || "").trim();
@@ -100,9 +132,9 @@ export async function POST(request: NextRequest) {
 	const filters: CatalogFilters = body.filters || {};
 
 	const client = await clientPromise;
-	const db = client.db(process.env.MONGODB_COURSES_DB || "VectorDB");
-	const collection = db.collection(process.env.MONGODB_COURSES_COLLECTION || "courses");
-	const professorsCollection = db.collection<ProfessorNameRecord>(process.env.MONGODB_PROFESSORS_COLLECTION || "professors");
+	const db = client.db("VectorDB");
+	const collection = db.collection("courses");
+	const professorsCollection = db.collection<ProfessorNameRecord>("professors");
 
 	const match: Record<string, unknown> = {};
 
@@ -153,58 +185,59 @@ export async function POST(request: NextRequest) {
 		}
 	}
 
-	const [result] = await collection
-		.aggregate([
-			{ $match: match },
-			{
-				$facet: {
-					results: [
-						{ $sort: { course_code: 1 } },
-						{ $skip: (page - 1) * pageSize },
-						{ $limit: pageSize },
-						{
-							$project: {
-								_id: { $toString: "$_id" },
-								course_code: 1,
-								title: 1,
-								description: 1,
-								course_types: 1,
-								academic_level: 1,
-								credits: 1,
-								requisites: 1,
-								sections: 1,
-							},
+	const includeFacets = page === 1;
+
+	const [result] = await collection.aggregate([
+		{ $match: match },
+		{
+			$facet: {
+				results: [
+					{ $sort: { course_code: 1 } },
+					{ $skip: (page - 1) * pageSize },
+					{ $limit: pageSize },
+					{
+						$project: {
+							_id: { $toString: "$_id" },
+							course_code: 1,
+							title: 1,
+							description: 1,
+							course_types: 1,
+							academic_level: 1,
+							credits: 1,
+							requisites: 1,
+							sections: 1,
 						},
-					],
-					totalCount: [{ $count: "count" }],
-					departmentFacets: [
-						{
-							$project: {
-								department: {
-									$arrayElemAt: [{ $split: ["$course_code", "-"] }, 0],
+					},
+				],
+				totalCount: [{ $count: "count" }],
+				...(includeFacets
+					? {
+						departmentFacets: [
+							{
+								$project: {
+									department: {
+										$arrayElemAt: [{ $split: ["$course_code", "-"] }, 0],
+									},
 								},
 							},
-						},
-						{ $group: { _id: "$department" } },
-						{ $sort: { _id: 1 } },
-					],
-					termFacets: [
-						{ $unwind: "$sections" },
-						{ $group: { _id: "$sections.term" } },
-						{ $sort: { _id: -1 } },
-					],
-					academicLevelFacets: [{ $group: { _id: "$academic_level" } }],
-				},
+							{ $group: { _id: "$department" } },
+							{ $sort: { _id: 1 } },
+						],
+						termFacets: [
+							{ $unwind: "$sections" },
+							{ $group: { _id: "$sections.term" } },
+							{ $sort: { _id: -1 } },
+						],
+						academicLevelFacets: [{ $group: { _id: "$academic_level" } }],
+					}
+					: {}),
 			},
-		])
-		.toArray();
+		},
+	]).toArray();
 
 	const total = result?.totalCount?.[0]?.count || 0;
 
-	const professorNameDocs = await professorsCollection
-		.find({}, { projection: { _id: 0, firstName: 1, lastName: 1 } })
-		.toArray();
-	const instructorLookup = buildInstructorLookup(professorNameDocs);
+	const instructorLookup = await getInstructorLookup(professorsCollection);
 
 	const mappedResults = (result?.results || []).map((course: Record<string, unknown>) => {
 		const sections = Array.isArray(course.sections) ? course.sections : [];
@@ -241,6 +274,18 @@ export async function POST(request: NextRequest) {
 		};
 	});
 
+	const facets: CatalogFacets = includeFacets
+		? {
+			departments: (result?.departmentFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
+			terms: (result?.termFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
+			academicLevels: (result?.academicLevelFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
+		}
+		: {
+			departments: [],
+			terms: [],
+			academicLevels: [],
+		};
+
 	return NextResponse.json({
 		results: mappedResults,
 		pagination: {
@@ -249,10 +294,6 @@ export async function POST(request: NextRequest) {
 			total,
 			totalPages: Math.max(1, Math.ceil(total / pageSize)),
 		},
-		facets: {
-			departments: (result?.departmentFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
-			terms: (result?.termFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
-			academicLevels: (result?.academicLevelFacets || []).map((item: { _id: string }) => item._id).filter(Boolean),
-		},
+		facets,
 	});
 }

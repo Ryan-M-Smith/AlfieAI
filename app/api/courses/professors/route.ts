@@ -27,6 +27,26 @@ interface OfferingsByTerm {
 	courses: Offering[];
 }
 
+interface ProfessorMatcher {
+	key: string;
+	fullNameRegex: RegExp;
+	initialNameRegex: RegExp | null;
+}
+
+interface CourseOfferingRow {
+	course_code?: string;
+	title?: string;
+	term?: string;
+	credits?: string;
+	instructorNames?: string[];
+}
+
+const DEPARTMENTS_CACHE_TTL_MS = 5 * 60 * 1000;
+let departmentsCache: {
+	expiresAt: number;
+	value: string[];
+} | null = null;
+
 function normalize(value: string) {
 	return value.trim().replace(/\s+/g, " ");
 }
@@ -55,44 +75,7 @@ function termSemesterRank(term: string): number {
 }
 
 async function getOfferingsByProfessor(params: {
-	coursesCollection: Collection<Document>;
-	firstName: string;
-	lastName: string;
-}) {
-	const firstToken = params.firstName.split(/\s+/).filter(Boolean)[0] || params.firstName;
-	const safeFirst = firstToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const safeLast = params.lastName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const firstInitial = firstToken.charAt(0).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-	const fullNameRegex = new RegExp(`^\\s*(?:dr\\.?\\s+|prof\\.?\\s+)?${safeFirst}(?:\\s+[A-Za-z]\\.)?\\s+${safeLast}\\s*$`, "i");
-	const initialNameRegex = firstInitial
-		? new RegExp(`^\\s*(?:dr\\.?\\s+|prof\\.?\\s+)?${firstInitial}\\.?\\s+${safeLast}\\s*$`, "i")
-		: null;
-
-	const instructorMatch = initialNameRegex
-		? { $in: [fullNameRegex, initialNameRegex] }
-		: { $regex: fullNameRegex };
-
-	const rows = await params.coursesCollection.aggregate([
-		{ $unwind: "$sections" },
-		{ $match: { "sections.instructors.name": instructorMatch } },
-		{
-			$project: {
-				course_code: 1,
-				title: 1,
-				term: "$sections.term",
-				credits: {
-					$cond: [
-						{ $eq: ["$credits.minimum", "$credits.maximum"] },
-						{ $toString: "$credits.minimum" },
-						{ $concat: [{ $toString: "$credits.minimum" }, "-", { $toString: "$credits.maximum" }] },
-					],
-				},
-			},
-		},
-		{ $sort: { term: 1, course_code: 1 } },
-	]).toArray();
-
+function buildOfferingsByTerm(rows: CourseOfferingRow[]): OfferingsByTerm[] {
 	const byTerm = new Map<string, Offering[]>();
 
 	for (const row of rows) {
@@ -106,7 +89,7 @@ async function getOfferingsByProfessor(params: {
 		byTerm.set(term, current);
 	}
 
-	const offeringsByTerm: OfferingsByTerm[] = [...byTerm.entries()]
+	return [...byTerm.entries()]
 		.map(([term, courses]) => ({
 			term,
 			courses: courses.sort((a, b) => a.course_code.localeCompare(b.course_code)),
@@ -118,8 +101,116 @@ async function getOfferingsByProfessor(params: {
 			if (semDiff !== 0) return semDiff;
 			return a.term.localeCompare(b.term);
 		});
+}
 
-	return offeringsByTerm;
+function buildProfessorMatcher(firstName: string, lastName: string): ProfessorMatcher {
+	const firstToken = firstName.split(/\s+/).filter(Boolean)[0] || firstName;
+	const safeFirst = firstToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const safeLast = lastName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const firstInitial = firstToken.charAt(0).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+	return {
+		key: `${firstName}|${lastName}`,
+		fullNameRegex: new RegExp(`^\\s*(?:dr\\.?\\s+|prof\\.?\\s+)?${safeFirst}(?:\\s+[A-Za-z]\\.)?\\s+${safeLast}\\s*$`, "i"),
+		initialNameRegex: firstInitial
+			? new RegExp(`^\\s*(?:dr\\.?\\s+|prof\\.?\\s+)?${firstInitial}\\.?\\s+${safeLast}\\s*$`, "i")
+			: null,
+	};
+}
+
+async function getOfferingsByProfessors(params: {
+	coursesCollection: Collection<Document>;
+	matchers: ProfessorMatcher[];
+}) {
+	if (params.matchers.length === 0) {
+		return new Map<string, OfferingsByTerm[]>();
+	}
+
+	const allRegexes = params.matchers.flatMap((matcher) => (
+		matcher.initialNameRegex
+			? [matcher.fullNameRegex, matcher.initialNameRegex]
+			: [matcher.fullNameRegex]
+	));
+
+	const rows = await params.coursesCollection.aggregate([
+		{ $unwind: "$sections" },
+		{ $match: { "sections.instructors.name": { $in: allRegexes } } },
+		{
+			$project: {
+				course_code: 1,
+				title: 1,
+				term: "$sections.term",
+				instructorNames: "$sections.instructors.name",
+				credits: {
+					$cond: [
+						{ $eq: ["$credits.minimum", "$credits.maximum"] },
+						{ $toString: "$credits.minimum" },
+						{ $concat: [{ $toString: "$credits.minimum" }, "-", { $toString: "$credits.maximum" }] },
+					],
+				},
+			},
+		},
+	]).toArray() as CourseOfferingRow[];
+
+	const rowsByProfessor = new Map<string, CourseOfferingRow[]>();
+	const seenByProfessor = new Map<string, Set<string>>();
+
+	for (const row of rows) {
+		const instructorNames = Array.isArray(row.instructorNames) ? row.instructorNames : [];
+
+		for (const matcher of params.matchers) {
+			const matched = instructorNames.some((name) => {
+				if (typeof name !== "string") {
+					return false;
+				}
+
+				if (matcher.fullNameRegex.test(name)) {
+					return true;
+				}
+
+				return Boolean(matcher.initialNameRegex?.test(name));
+			});
+
+			if (!matched) {
+				continue;
+			}
+
+			const dedupeKey = `${String(row.term || "")}::${String(row.course_code || "")}::${String(row.title || "")}`;
+			const seen = seenByProfessor.get(matcher.key) || new Set<string>();
+			if (seen.has(dedupeKey)) {
+				continue;
+			}
+
+			seen.add(dedupeKey);
+			seenByProfessor.set(matcher.key, seen);
+
+			const current = rowsByProfessor.get(matcher.key) || [];
+			current.push(row);
+			rowsByProfessor.set(matcher.key, current);
+		}
+	}
+
+	const offeringsByProfessor = new Map<string, OfferingsByTerm[]>();
+	for (const matcher of params.matchers) {
+		offeringsByProfessor.set(matcher.key, buildOfferingsByTerm(rowsByProfessor.get(matcher.key) || []));
+	}
+
+	return offeringsByProfessor;
+}
+
+async function getDepartmentOptions(professorsCollection: Collection<ProfessorRecord>): Promise<string[]> {
+	const now = Date.now();
+	if (departmentsCache && departmentsCache.expiresAt > now) {
+		return departmentsCache.value;
+	}
+
+	const values = (await professorsCollection.distinct("department")).filter(Boolean).sort();
+	departmentsCache = {
+		expiresAt: now + DEPARTMENTS_CACHE_TTL_MS,
+		value: values,
+	};
+
+	return values;
 }
 
 export async function POST(request: NextRequest) {
@@ -149,27 +240,52 @@ export async function POST(request: NextRequest) {
 		match.department = department;
 	}
 
-	const total = await professorsCollection.countDocuments(match);
-	const professorDocs = await professorsCollection
-		.find(match)
+	const [total, departmentOptions, professorDocs] = await Promise.all([
+		professorsCollection.countDocuments(match),
+		getDepartmentOptions(professorsCollection),
+		professorsCollection
+		.find(match, {
+			projection: {
+				_id: 0,
+				firstName: 1,
+				lastName: 1,
+				department: 1,
+				primaryTitle: 1,
+				titles: 1,
+				email: 1,
+				phone: 1,
+				biographyUrl: 1,
+				headshotUrl: 1,
+			},
+		})
 		.sort({ lastName: 1, firstName: 1 })
 		.skip((page - 1) * pageSize)
 		.limit(pageSize)
-		.toArray();
+		.toArray(),
+	]);
 
-	const departmentOptions = await professorsCollection.distinct("department");
-
-	const results = await Promise.all(
-		professorDocs.map(async (professor) => {
+	const preparedProfessors = professorDocs.map((professor) => {
 			const firstName = normalize(professor.firstName || "");
 			const lastName = normalize(professor.lastName || "");
 			const fullName = `${firstName} ${lastName}`.trim();
+			const matcher = buildProfessorMatcher(firstName, lastName);
 
-			const offeringsByTerm = await getOfferingsByProfessor({
-				coursesCollection,
+			return {
+				professor,
 				firstName,
 				lastName,
-			});
+				fullName,
+				matcher,
+			};
+		});
+
+	const offeringsByProfessor = await getOfferingsByProfessors({
+		coursesCollection,
+		matchers: preparedProfessors.map((item) => item.matcher),
+	});
+
+	const results = preparedProfessors.map(({ professor, firstName, lastName, fullName, matcher }) => {
+			const offeringsByTerm = offeringsByProfessor.get(matcher.key) || [];
 
 			const totalCourses = offeringsByTerm.reduce((acc, term) => acc + term.courses.length, 0);
 
@@ -188,8 +304,7 @@ export async function POST(request: NextRequest) {
 				offeringsByTerm,
 				totalCourses,
 			};
-		})
-	);
+		});
 
 	return NextResponse.json({
 		results,
