@@ -18,9 +18,9 @@ interface CourseViewProps {
 
 export default function CourseView({ className, course }: CourseViewProps): JSX.Element {
 	return (
-		<div className="flex flex-col w-full rounded-lg max-w-3xl mx-auto">
+		<div className={`${className} flex flex-col w-full rounded-lg max-w-3xl mx-auto`}>
 			<div className="flex justify-between items-center text-lg font-semibold">
-				<h1>{course.section_name.slice(0, -3)}</h1>
+				<h1>{course.course_code}</h1>
 				<h1>{course.title}</h1>
 			</div>
 

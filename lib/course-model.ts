@@ -105,7 +105,7 @@ const modelConfig: GenerateContentConfig = {
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
-	tools: [{ googleSearch: true }],
+	tools: [{ googleSearch: {} }],
 
 	safetySettings: [
 		{
