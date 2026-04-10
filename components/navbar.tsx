@@ -13,6 +13,7 @@ import Image from "next/image";
 import { IoIosArrowBack, IoIosArrowDown } from "react-icons/io";
 import { JSX } from "react";
 import Link from "next/link";   
+import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,6 +22,7 @@ import { getPage, Page, pages } from "@/lib/pages";
 export default function Navbar(): JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
+	const { data: session, status } = useSession();
 
 	const [isMobile, setIsMobile] = useState(false);
 
@@ -105,6 +107,24 @@ export default function Navbar(): JSX.Element {
 				</div>
 				
 				<div className="flex gap-2 pr-1">
+					{status !== "loading" && (
+						<Button
+							className="font-medium"
+							radius="full"
+							variant="flat"
+							onPress={() => {
+								if (session?.user) {
+									void signOut({ callbackUrl: pathname });
+									return;
+								}
+
+								void signIn(undefined, { callbackUrl: pathname });
+							}}
+						>
+							{session?.user ? "Sign out" : "Sign in"}
+						</Button>
+					)}
+
 					<Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
 						<Button
 							className={`
