@@ -6,7 +6,8 @@
 
 "use client";
 
-import { Button, TextArea } from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Textarea } from "@heroui/input";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
@@ -199,7 +200,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 				}
 			}}
 		>
-			<TextArea
+			<Textarea
 				className="flex flex-col sm:flex-row justify-center items-center w-full sm:w-2/3 lg:w-1/3 mx-auto px-0 sm:px-0 cursor-text"
 				ref={textareaRef}
 				variant="faded"

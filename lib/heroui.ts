@@ -4,6 +4,6 @@
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
-import { heroui } from "@heroui/react";
+import { heroui } from "@heroui/theme";
 
 export default heroui();

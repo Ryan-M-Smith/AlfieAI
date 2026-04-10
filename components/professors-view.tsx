@@ -1,6 +1,9 @@
 "use client";
 
-import { Button, Input, Select, SelectItem, Spinner } from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
+import { Spinner } from "@heroui/spinner";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 

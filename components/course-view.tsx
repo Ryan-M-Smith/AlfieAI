@@ -6,7 +6,8 @@
 
 "use client";
 
-import { Accordion, AccordionItem, Button } from "@heroui/react";
+import { Accordion, AccordionItem } from "@heroui/accordion";
+import { Button } from "@heroui/button";
 import { JSX } from "react";
 import Link from "next/link";
 import { LuSparkles } from "react-icons/lu";

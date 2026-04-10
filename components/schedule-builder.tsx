@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Input } from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Input } from "@heroui/input";
 import { useMemo, useState } from "react";
 
 interface CourseLite {

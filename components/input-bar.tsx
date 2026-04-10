@@ -6,7 +6,8 @@
 
 "use client";
 
-import { Button, TextArea } from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Textarea } from "@heroui/input";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { JSX, KeyboardEvent, useEffect, useState, useRef } from "react";
 
@@ -85,7 +86,7 @@ export default function InputBar({ className, placeholder, onSubmit }: InputBarP
 					}
 				}}
 			>
-				<TextArea
+				<Textarea
 					ref={textareaRef}
 					radius="full"
 					variant="faded"

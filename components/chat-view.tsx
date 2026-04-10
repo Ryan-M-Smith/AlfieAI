@@ -16,7 +16,7 @@ import ChatContainer from "@/components/chat-container";
 import InputBar from "@/components/input-bar";
 import Hero from "@/components/hero";
 import Navbar from "@/components/navbar";
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 
 interface MessageData {
 	content: ReactNode;

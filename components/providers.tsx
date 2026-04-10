@@ -1,13 +1,14 @@
 "use client";
 
-import { HeroUIProvider } from "@heroui/react";
+import { HeroUIProvider } from "@heroui/system";
 import { SessionProvider } from "next-auth/react";
 import type { ThemeProviderProps } from "next-themes";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 
 export interface ProvidersProps {
-	children: React.ReactNode;
+	children: ReactNode;
 	themeProps?: ThemeProviderProps;
 }
 
