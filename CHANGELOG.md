@@ -142,3 +142,25 @@
 * Navbar
   * A lighter font weight is now used for `AlfieAI`. I feel like this does a better job of highlighting
     the name of the tool instead of the branding.
+
+## v4.0.1 - 9/19/25
+
+* General bug fixes
+  * Updated harm block thresholds to hopefully avoid certain responses
+  * Updated how links are formatted in chat responses
+
+## v5.0.0 - 2/2/26
+
+* Introducing AlfieAI Presence - the AI expert on Involve to help you manage your RSO.
+  * Fully-featured chatbot to help you learn and navigate Juniata's Involve platform
+  * Provides clear answers with step-by-step instructions to follow on the website
+  * Correctly guides students through countless scenarios
+  * Refers students to human sources as necessary
+  * Features over 10 greetings that can be randomly displayed to users
+* Small visual changes
+  * "Features" are now called "Tools" in the UI
+  * Loading spinners are now dots, and color-coded to their respective pages
+* Models
+  * All chat models now use Gemini 3 Flash
+  * All model prompts are now stored in `/prompts` and loaded dynamically
+  * Responses are being tested with a chunk-style API to see if it improves response speed

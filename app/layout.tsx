@@ -13,7 +13,7 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
-import { fontBig, fontBubble, fontChalkboard, fontCursive, fontMono, fontSans } from "@/config/fonts";
+import { fontBig, fontBubble, fontChalkboard, fontRacing, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 import React from "react";
@@ -43,6 +43,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 		${fontSans.variable}
 		${fontMono.variable}
 		${fontChalkboard.variable}
+		${fontRacing.variable}
 		${fontCursive.variable}
 		${fontBig.variable}
 		${fontBubble.variable}

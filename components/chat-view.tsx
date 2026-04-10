@@ -15,7 +15,7 @@ import Message from "@/components/message";
 import ChatContainer from "@/components/chat-container";
 import InputBar from "@/components/input-bar";
 import Hero from "@/components/hero";
-import Navbar from "@/components//navbar";
+import Navbar from "@/components/navbar";
 import { Button } from "@heroui/button";
 
 interface MessageData {
@@ -133,17 +133,26 @@ export default function ChatView(): JSX.Element {
 						<Markdown
 							remarkPlugins={[remarkGfm]}
 							components={{
-								a: ({ ...props }) => (
-									<a {...props} href={props.href} rel="noopener noreferrer" onClick={(e) => {
-										e.preventDefault();
-										if (window.confirm(`Open this link? ${props.href}`)) {
-											window.open(props.href, "_blank", "noopener,noreferrer");
-										}
-									}}>
-										{props.children}
-									</a>
-							)
-						}}
+								a: (props) => {
+									const { href, children } = props;
+									
+									return (
+										<a
+											href={href}
+											rel="noopener noreferrer"
+											target="_blank"
+											onClick={(e) => {
+												e.preventDefault();
+												if (window.confirm(`Open this link? ${href}`)) {
+													window.open(href, "_blank", "noopener,noreferrer");
+												}
+											}}
+										>
+											{children}
+										</a>
+									);
+								}
+							}}
 					>
 						{response}
 					</Markdown>
@@ -265,6 +274,11 @@ export default function ChatView(): JSX.Element {
 											role={isUser? "user" : "model"}
 											isLoading={isLoading}
 											isFirst={isUser && i === 0}
+
+											spinner={{ 
+												color: "primary",
+												variant: "dots"
+											}}
 										>
 											{content}
 										</Message>

@@ -11,6 +11,7 @@ import { IoChatboxEllipses } from "react-icons/io5";
 import { MdOutlineContactSupport } from "react-icons/md";
 import { PiGavelFill } from "react-icons/pi";
 import { ReactNode } from "react";
+import { TbTimelineEventText } from "react-icons/tb";
 
 export interface Page {
 	href: 			string;
@@ -22,7 +23,7 @@ export interface Page {
 export type PageLayout = Record<string, Record<string, Page>>;
 
 export const pages: PageLayout = {
-	features: {
+	tools: {
 		chat: {
 			href: "/",
 			name: "chat",
@@ -81,7 +82,22 @@ export const pages: PageLayout = {
 					</span>
 				</span>
 			)
-		}
+		},
+
+		events: {
+			href: "/events",
+			name: "events",
+			description: "Get targeted help with Precense/Involve",
+			card: (
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
+					AlfieAI
+					<TbTimelineEventText size={15}/>
+					<span className="text-purple-500 font-racing">
+						Events
+					</span>
+				</span>
+			)
+		},
 	},
 
 	info: {

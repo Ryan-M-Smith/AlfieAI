@@ -26,7 +26,7 @@ export default function Live() {
 			
 			<Navbar/>
 
-			<span className="pointer-events-none absolute inset-0 z-10 top-[12rem] text-center px-2 sm:px-0">
+			<span className="pointer-events-none absolute inset-0 z-10 top-48 text-center px-2 sm:px-0">
 				<span className="flex justify-center items-center gap-x-1 relative text-4xl sm:text-7xl text-white font-big">
 					<span
 						className={`
