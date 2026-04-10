@@ -5,7 +5,7 @@
 //
 
 import { GrSchedules } from "react-icons/gr";
-import { JSX } from "react";
+import { JSX, Suspense } from "react";
 
 import CourseCatalogClient from "@/components/course-catalog-client";
 
@@ -27,7 +27,15 @@ export default function Catalog(): JSX.Element {
 				</h1>
 			</div>
 
-			<CourseCatalogClient/>
+			<Suspense
+				fallback={(
+					<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pb-10">
+						<div className="mt-10 flex justify-center text-default-500">Loading catalog...</div>
+					</div>
+				)}
+			>
+				<CourseCatalogClient/>
+			</Suspense>
 		</div>
 	);
 }
