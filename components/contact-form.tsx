@@ -6,9 +6,7 @@
 
 "use client";
 
-import { Button } from "@heroui/button";
-import { Form } from "@heroui/form";
-import { Input, Textarea } from "@heroui/input";
+import { Button, Form, Input, Textarea } from "@heroui/react";
 import { JSX } from "react";
 import { useRouter } from "next/navigation";
 

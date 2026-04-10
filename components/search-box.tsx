@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Button } from "@heroui/button";
+import { Button, Textarea } from "@heroui/react";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
@@ -15,7 +15,6 @@ import {
 	useEffect, useRef, useState
 } from "react";
 import { useRouter } from "next/navigation";
-import { Textarea } from "@heroui/input";
 
 import placeholders from "@/lib/placeholders";
 import { delay } from "framer-motion";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/button";
+import { Button } from "@heroui/react";
 import { FaPhoneAlt } from "react-icons/fa";
 import { LuExternalLink, LuGraduationCap, LuSparkles } from "react-icons/lu";
 import { MdEmail } from "react-icons/md";

@@ -4,7 +4,7 @@
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
-import { Button } from "@heroui/button";
+import { Button } from "@heroui/react";
 import { JSX } from "react";
 import Link from "next/link";
 import { PiGavelFill } from "react-icons/pi";

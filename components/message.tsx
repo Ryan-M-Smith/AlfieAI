@@ -5,7 +5,7 @@
 //
 
 import { JSX, ReactNode } from "react";
-import { Spinner } from "@heroui/spinner";
+import { Spinner } from "@heroui/react";
 
 type SpinnerColor = "primary" | "secondary" | "current" | "white" | "default" | "success" | "warning" | "danger" | undefined;
 type SpinnerVariant = "spinner" | "default" | "wave" | "dots" | "gradient" | "simple" | undefined;

@@ -6,10 +6,9 @@
 
 "use client";
 
-import { Button } from "@heroui/button";
+import { Button, Textarea } from "@heroui/react";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { JSX, KeyboardEvent, useEffect, useState, useRef } from "react";
-import { Textarea } from "@heroui/input";
 
 interface InputBarProps {
 	className?: string;

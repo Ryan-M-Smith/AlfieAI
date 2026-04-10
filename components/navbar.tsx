@@ -7,8 +7,7 @@
 "use client";
 
 import { BsGithub } from "react-icons/bs";
-import { Button } from "@heroui/button";
-import { Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger } from "@heroui/dropdown";
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownSection, DropdownTrigger } from "@heroui/react";
 import Image from "next/image";
 import { IoIosArrowBack, IoIosArrowDown } from "react-icons/io";
 import { JSX } from "react";
