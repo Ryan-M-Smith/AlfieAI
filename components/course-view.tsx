@@ -341,16 +341,22 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 												Enrollment: {available > 0 ? "Open" : waitlisted > 0 ? "Waitlisted" : "Closed"}
 											</span>
 										</p>
+										
 										<p><strong>Status:</strong> {section.status}</p>
 										{waitlisted > 0 && <p><strong>Waitlist:</strong> {waitlisted} student{waitlisted === 1 ? "" : "s"}</p>}
 										<p><strong>Dates:</strong> {prettyDate(section.start_date)} to {prettyDate(section.end_date)}</p>
 										<p><strong>Location:</strong> {section.location}</p>
+										
 										{(section.meeting_info || []).map((meeting, meetingIndex) => (
-											<p key={`${course._id}-${section.section_name}-${sectionIndex}-meeting-${meetingIndex}`}>
-												<strong>Meeting {meetingIndex + 1}:</strong> {formatMeetingDays(meeting.days)} • {formatMeetingRange(meeting.start_time, meeting.end_time)} • {meeting.classroom}
+											<p key={`${course._id}-${section.section_name}-${sectionIndex}-meeting-${meetingIndex}`} className="flex flex-wrap gap-1">
+												<strong>Meeting {meetingIndex + 1}:</strong>
+												{formatMeetingDays(meeting.days)} •
+												{formatMeetingRange(meeting.start_time, meeting.end_time)} •
+												{meeting.classroom}
 											</p>
 										))}
-										<p>
+										
+										<p className="flex flex-wrap gap-1">
 											<strong>
 												{instructorNames.length === 1 ? "Instructor" : "Instructors"}:
 											</strong>
