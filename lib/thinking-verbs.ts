@@ -8,7 +8,8 @@
  * Thinking verbs shown as the model generates. We currently have 103 as of v6.0.0.
  */
 const thinkingVerbs = [
-    "thinking", "analyzing", "synthesizing", "reasoning", "orchestrating", "refactoring",
+    // Ryan Smith
+	"thinking", "analyzing", "synthesizing", "reasoning", "orchestrating", "refactoring",
     "debugging", "profiling", "benchmarking", "architecting", "modeling", "planning",
     "prioritizing", "scoping", "mapping", "structuring", "decomposing", "specifying",
     "designing", "drafting", "composing", "editing", "polishing", "streamlining",
@@ -24,8 +25,17 @@ const thinkingVerbs = [
     "abstracting", "generalizing", "specializing", "instantiating", "templating", "parameterizing",
     "sequencing", "scheduling", "pipelining", "parallelizing", "batching", "queuing",
     "reflecting", "evaluating", "revising", "auditing", "monitoring", "supervising",
-	"pondering", "behooving", "pontificating", "cogitating", "swagging", "ruminating",
-	"deducing", 
+	"deducing",
+	
+	// Simon Ramsey
+	"pondering", "pontificating", "swagging",
+	
+	// Dr. Kruse
+	"behooving", "cogitating",
+
+	// Luke Becker
+	"ruminating"
+	
 ] as const;
 
 export default thinkingVerbs;
