@@ -132,9 +132,9 @@ export async function POST(request: NextRequest) {
 	const filters: CatalogFilters = body.filters || {};
 
 	const client = await clientPromise;
-	const db = client.db("VectorDB");
-	const collection = db.collection("courses");
-	const professorsCollection = db.collection<ProfessorNameRecord>("professors");
+	const db = client.db(process.env.MONGODB_COURSES_DB || "VectorDB");
+	const collection = db.collection(process.env.MONGODB_COURSES_COLLECTION || "courses");
+	const professorsCollection = db.collection<ProfessorNameRecord>(process.env.MONGODB_PROFESSORS_COLLECTION || "professors");
 
 	const match: Record<string, unknown> = {};
 
