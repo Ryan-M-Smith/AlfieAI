@@ -88,7 +88,7 @@
     a more human-like way is the dream.
   * The embedding microservice is now kept alive with a Google Cloud Scheduler `cron` job that pings the server
     every 10 minutes. I could configure the microservice to never scale down during downtime, but that would increase
-    my server costs tremendously. Cloud Scheduler is bascially always free as ling as you're below the job threshold.
+    my server costs tremendously. Cloud Scheduler is bascially always free as long as you're below the job threshold.
   * The semantic search index has been redesigned to be smaller, more accurate, and not return duplicates
 
 ## v3.0.1 - 6/14/25
@@ -164,3 +164,22 @@
   * All chat models now use Gemini 3 Flash
   * All model prompts are now stored in `/prompts` and loaded dynamically
   * Responses are being tested with a chunk-style API to see if it improves response speed
+
+## v6.0.0 - 4/23/26
+
+* Introducing AlfieAI Courses
+  * Three main features - course catalog, schedule builder, and faculty directory
+* General chat UI and animation polish
+  * Added an upgraded "AlfieAI is ..." loading animation with rotating verbs and smoother text reveal
+  * Loading verbs are now selected randomly with immediate-repeat protection
+  * The loading text now uses a continuous animated rainbow text gradient
+  * Ellipsis timing now waits until phrase fade-in completes to prevent visual glitches
+  * Loading animation styles were moved to a dedicated stylesheet for easier maintenance
+* Input bar refinements
+  * Stabilized control alignment so icons and send button stay visually consistent as the textarea expands
+  * Normalized icon button sizing for improved symmetry across controls
+* AlfieAI People
+  * Fixed a transition UX issue where the query could clear before the results route finished loading
+* AlfieAI Presence
+  * Updated the events chat visual styling to match the modern chat aesthetic
+  * Refreshed event chat atmospherics and updated user bubble gradients/border treatment
