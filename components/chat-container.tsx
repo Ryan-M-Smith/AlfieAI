@@ -17,8 +17,8 @@ export default function ChatContainer({ className, children }: ChatContainerProp
 	return (
 		<div
 			className={`
-				${className} bg-transparent flex flex-col justify-center items-center
-				sm:items-start lg:w-3/4 sm:w-full mx-auto px-4 sm:px-6 md:px-8 snap-end
+				${className} bg-transparent flex flex-col justify-center w-full max-w-5xl
+				mx-auto px-2 sm:px-4 lg:px-6 snap-end
 			`}
 		>
 			{children}

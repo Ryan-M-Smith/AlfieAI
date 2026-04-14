@@ -6,316 +6,389 @@
 
 "use client";
 
+import { Button } from "@heroui/button";
+import { JSX, useCallback, useEffect, useRef, useState } from "react";
 import { IoIosArrowDown } from "react-icons/io";
-import { JSX, ReactNode, useEffect, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
-import Message from "@/components/message";
 import ChatContainer from "@/components/chat-container";
 import InputBar from "@/components/input-bar";
+import MarkdownRenderer from "@/components/markdown-renderer";
+import Message from "@/components/message";
 import Navbar from "@/components/navbar";
-import { Button } from "@heroui/button";
 
-interface MessageData {
-	content: ReactNode;
+interface ChatMessage {
+	id: string;
+	role: "user" | "model";
+	content: string;
 	isLoading: boolean;
 }
 
+function createMessageId(): string {
+	if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+		return crypto.randomUUID();
+	}
+
+	return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export default function EventsChatView(): JSX.Element {
-	const [query, setQuery] = useState<string>("");
-	const [response, setResponse] = useState<string>("");
-	const [messages, setMessages] = useState<MessageData[]>([]);
-	const [autoScroll, setAutoScroll] = useState<boolean>(true);
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [isGenerating, setIsGenerating] = useState<boolean>(false);
+	const [showJumpButton, setShowJumpButton] = useState<boolean>(false);
+	const hasMessages = messages.length > 0;
+	const [starterPrompts, setStarterPrompts] = useState<string[]>([
+		"How do I submit a club event in Involve?",
+		"Where can I find and manage Event PINs?",
+		"What forms are required for event approvals?",
+		"How should I track attendance in Presence?",
+	]);
 
-	const divRef = useRef<HTMLDivElement>(null);
-	const lastManualScrollRef = useRef<number>(Date.now());
-	const isManualScrollingRef = useRef<boolean>(false);
-	const forceScrollRef = useRef<boolean>(false);
-	const scrollDebounceRef = useRef<NodeJS.Timeout | null>(null);
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	const shouldAutoScrollRef = useRef<boolean>(true);
+	const streamAbortRef = useRef<AbortController | null>(null);
+	const activeAssistantIdRef = useRef<string | null>(null);
+	const queuedTextRef = useRef<string>("");
+	const assembledTextRef = useRef<string>("");
+	const rafRef = useRef<number | null>(null);
 
-	// Scroll to top of last user message when a new prompt is added
-	useEffect(() => {
-		if (!messages.length || !divRef.current) return;
-		const el = divRef.current;
-		const userMessages = el.querySelectorAll("[data-role='user']");
-		const lastUserEl = userMessages[userMessages.length - 1];
-
-		if (lastUserEl && messages[messages.length - 1].isLoading) {
-			const containerRect = el.getBoundingClientRect();
-			const messageRect = lastUserEl.getBoundingClientRect();
-			console.log(messageRect.top, containerRect.top, el.scrollTop);
-			const offset = messageRect.top - containerRect.top + el.scrollTop - 40; // 40px padding from top
-			el.scrollTo({ top: offset, behavior: "smooth" });
+	const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+		const element = scrollContainerRef.current;
+		if (!element) {
+			return;
 		}
-	}, [messages]);
 
-	// Track user scroll position to show/hide scroll-to-bottom button
+		element.scrollTo({ top: element.scrollHeight, behavior });
+	}, []);
+
+	const syncBottomState = useCallback(() => {
+		const element = scrollContainerRef.current;
+		if (!element) {
+			return;
+		}
+
+		const remaining = element.scrollHeight - element.clientHeight - element.scrollTop;
+		const isAtBottom = remaining < 48;
+
+		shouldAutoScrollRef.current = isAtBottom;
+		setShowJumpButton(!isAtBottom);
+	}, []);
+
+	const flushQueuedResponse = useCallback(() => {
+		const activeAssistantId = activeAssistantIdRef.current;
+		if (!activeAssistantId || !queuedTextRef.current) {
+			return;
+		}
+
+		assembledTextRef.current += queuedTextRef.current;
+		queuedTextRef.current = "";
+		const snapshot = assembledTextRef.current;
+
+		setMessages((previous) => previous.map((message) => {
+			if (message.id !== activeAssistantId) {
+				return message;
+			}
+
+			return {
+				...message,
+				content: snapshot,
+				isLoading: false,
+			};
+		}));
+	}, []);
+
+	const scheduleResponseFlush = useCallback(() => {
+		if (rafRef.current !== null) {
+			return;
+		}
+
+		rafRef.current = window.requestAnimationFrame(() => {
+			rafRef.current = null;
+			flushQueuedResponse();
+		});
+	}, [flushQueuedResponse]);
+
 	useEffect(() => {
-		const el = divRef.current;
-
-		if (!el) {
+		const element = scrollContainerRef.current;
+		if (!element || !hasMessages) {
 			return;
 		}
 
 		const handleScroll = () => {
-			const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-			setAutoScroll(nearBottom);
+			syncBottomState();
 		};
-		el.addEventListener("scroll", handleScroll);
 
-		return () => el.removeEventListener("scroll", handleScroll);
-	}, []);
+		element.addEventListener("scroll", handleScroll, { passive: true });
+		syncBottomState();
 
-	// Post a message and wait for a response
+		return () => {
+			element.removeEventListener("scroll", handleScroll);
+		};
+	}, [hasMessages, syncBottomState]);
+
 	useEffect(() => {
-		if (!query || query.length < 1) {
+		if (!messages.length || !shouldAutoScrollRef.current) {
 			return;
 		}
 
-		const userQuery: MessageData = { content: query, isLoading: false };
-		const modelResponse: MessageData = { content: null, isLoading: true };
+		scrollToBottom(isGenerating ? "auto" : "smooth");
+	}, [messages, isGenerating, scrollToBottom]);
 
-		setMessages(prev => [...prev, userQuery, modelResponse]);
-		setAutoScroll(true);
-		setResponse("");
+	useEffect(() => {
+		let cancelled = false;
 
-		(async () => {
+		async function loadStarterPrompts() {
+			try {
+				const response = await fetch("/api/events/prompts", { cache: "no-store" });
+				if (!response.ok) {
+					return;
+				}
+
+				const data = await response.json() as { prompts?: string[] };
+				if (!cancelled && Array.isArray(data.prompts) && data.prompts.length >= 4) {
+					setStarterPrompts(data.prompts.slice(0, 4));
+				}
+			}
+			catch {
+				// Keep static fallbacks when prompt generation fails.
+			}
+		}
+
+		void loadStarterPrompts();
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (streamAbortRef.current) {
+				streamAbortRef.current.abort();
+			}
+
+			if (rafRef.current !== null) {
+				window.cancelAnimationFrame(rafRef.current);
+			}
+		};
+	}, []);
+
+	const submitQuery = async (query: string, files: File[] = []) => {
+		if (!query.trim() || isGenerating) {
+			return;
+		}
+
+		const userId = createMessageId();
+		const assistantId = createMessageId();
+		activeAssistantIdRef.current = assistantId;
+		queuedTextRef.current = "";
+		assembledTextRef.current = "";
+
+		setMessages((previous) => [
+			...previous,
+			{ id: userId, role: "user", content: query, isLoading: false },
+			{ id: assistantId, role: "model", content: "", isLoading: true },
+		]);
+
+		setIsGenerating(true);
+		shouldAutoScrollRef.current = true;
+		setShowJumpButton(false);
+		scrollToBottom("smooth");
+
+		const controller = new AbortController();
+		streamAbortRef.current = controller;
+
+		try {
+			const formData = new FormData();
+			formData.append("query", query);
+			for (const file of files) {
+				formData.append("files", file);
+			}
+
 			const response = await fetch("/api/events", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ query })
+				body: formData,
+				signal: controller.signal,
 			});
 
-			const reader = response.body?.getReader();
+			if (!response.ok) {
+				throw new Error(`Events chat request failed with status ${response.status}.`);
+			}
+
+			if (!response.body) {
+				throw new Error("No response stream was returned.");
+			}
+
+			const reader = response.body.getReader();
 			const decoder = new TextDecoder("utf-8");
 
 			while (true) {
-				setIsGenerating(true);
-
-				if (!reader) {
-					continue;
-				}
-
 				const { done, value } = await reader.read();
-
 				if (done) {
 					break;
 				}
 
-				const text = decoder.decode(value);
-				setResponse(prev => prev + text);
+				queuedTextRef.current += decoder.decode(value, { stream: true });
+				scheduleResponseFlush();
 			}
 
-			setIsGenerating(false);
-		})();
-	}, [query]);
+			queuedTextRef.current += decoder.decode();
 
-	// Update the last message with the model's streamed response
-	useEffect(() => {
-		if (!response || response.length < 1) {
-			return;
-		}
+			if (rafRef.current !== null) {
+				window.cancelAnimationFrame(rafRef.current);
+				rafRef.current = null;
+			}
 
-		const newMessages = [...messages];
-		newMessages[newMessages.length - 1] = {
-			content: (
-				<div className="flex justify-center items-center w-full mt-1">
-					<span className={`
-						prose text-default-foreground prose-p:my-0.5 prose-p:leading-snug prose-li:my-0.5
-						prose-ul:leading-snug prose-ol:leading-snug prose-li:leading-snug prose-ul:pl-5
-						prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary prose-headings:text-default-foreground
-						prose-strong:text-default-foreground prose-strong:font-bold prose-headings:leading-none
-						prose-code:font-mono prose-code:text-foreground-600 prose-li:marker:text-default-foreground
-					`}>
-						<Markdown
-							remarkPlugins={[remarkGfm]}
-							components={{
-								a: ({ ...props }) => (
-									<a {...props} href={props.href} rel="noopener noreferrer" onClick={(e) => {
-										e.preventDefault();
-										if (window.confirm(`Open this link? ${props.href}`)) {
-											window.open(props.href, "_blank", "noopener,noreferrer");
-										}
-									}}>
-										{props.children}
-									</a>
-							)
-						}}
-					>
-						{response}
-					</Markdown>
-				</span>
-			</div>
-		),
-			isLoading: false
-		};
+			flushQueuedResponse();
+			const finalContent = assembledTextRef.current.trim();
 
-		setMessages(newMessages);
-	}, [response]);
-
-	// Show scroll-to-bottom button as soon as content is scrollable and user is not at the bottom
-	useEffect(() => {
-		if (!divRef.current) {
-			return;
-		}
-
-		const el = divRef.current;
-		const isScrollable = el.scrollHeight > el.clientHeight + 2; // Add a 2px buffer to account for scrollbar width
-		const isAtBottom = Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 10;
-		
-		setAutoScroll(!isScrollable || isAtBottom);
-	}, [messages]);
-
-	const scrollToBottom = () => {
-		const el = divRef.current;
-		if (!el) return;
-		el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-	};
-
-	const ToBottomButton = () => (
-		<Button
-			className="absolute bottom-36 sm:bottom-10 left-0 right-0 w-fit mx-auto text-default-500 backdrop-blur-lg shadow-lg z-20 pt-1"
-			size={window.innerWidth < 640? "sm" : "md"}
-			radius="full"
-			variant="ghost"
-			onPress={scrollToBottom}
-			startContent={<IoIosArrowDown size={30} />}
-			isIconOnly
-		/>
-	)
-
-	// Determine if the model is generating (last message is loading)
-	// const isGenerating = messages.length > 0 && messages[messages.length - 1]?.isLoading;
-
-	// Determine if we should show extra bottom padding (only during generation)
-	const showExtraPadding = (
-		messages.length > 1 &&
-		messages[messages.length - 2] &&
-		!messages[messages.length - 2].isLoading &&
-		messages[messages.length - 1] &&
-		messages[messages.length - 1].isLoading
-	)
-
-	const greetings = [
-		"Get help using Involve!",
-		"Ready to get you Involve-d on campus.",
-		"Juniata Involve questions? I can walk you through every step.",
-		"Need Presence tips for club events or attendance? Ask away!",
-		"Let's make your Juniata events shine! how can I help with Involve?",
-		"Curious which Campus Forms to use in Presence? I'm here for you.",
-		"Planning a club event? I can guide you through the Juniata Presence forms.",
-		"Not sure where Event PINs live? I'll show you inside Involve.",
-		"Ask me how to track attendance in Presence like a pro.",
-		"From registration to feedback, I know every Juniata Presence workflow.",
-		"Let's explore Involve together - what do you need?",
-		"Need help submitting waivers or approvals? I speak Juniata Presence.",
-		"Welcome to the Juniata Events Assistant - ready to really use Involve?",
-		"Involve novice to instant expert"
-	];
-
-	const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-
-	useEffect(() => {
-		if (!divRef.current) return;
-		const element = divRef.current;
-
-		const handleScroll = () => {
-			if (!forceScrollRef.current) {
-				lastManualScrollRef.current = Date.now();
-				isManualScrollingRef.current = true;
-
-				if (scrollDebounceRef.current) {
-					clearTimeout(scrollDebounceRef.current);
+			setMessages((previous) => previous.map((message) => {
+				if (message.id !== assistantId) {
+					return message;
 				}
 
-				scrollDebounceRef.current = setTimeout(() => {
-					const scrollDelta = Math.ceil(element.scrollHeight - element.clientHeight - element.scrollTop);
-					const isExactlyAtBottom = Math.abs(scrollDelta) < 10;
-					const scrollableHeight = element.scrollHeight - element.clientHeight;
+				return {
+					...message,
+					content: finalContent || "I could not generate a response right now. Please try again.",
+					isLoading: false,
+				};
+			}));
+		}
+		catch (error) {
+			const fallback = error instanceof Error && error.name === "AbortError"
+				? "This request was canceled."
+				: "I ran into an issue while generating a response. Please try again.";
 
-					const adaptiveThreshold = Math.min(
-						Math.max(scrollableHeight * 0.15, 60),
-						300
-					);
+			setMessages((previous) => previous.map((message) => {
+				if (message.id !== assistantId) {
+					return message;
+				}
 
-					// Only update autoScroll if the value changes
-					if (isExactlyAtBottom && !autoScroll) {
-						setAutoScroll(true);
-					}
-					else if (!isExactlyAtBottom && autoScroll) {
-						setAutoScroll(false);
-					}
-
-					isManualScrollingRef.current = false;
-				}, 80);
-			}
-		};
-
-		element.addEventListener("scroll", handleScroll);
-		return () => element.removeEventListener("scroll", handleScroll);
-	}, [autoScroll]);
-
-	// Helper to determine if content is scrollable
-	const isScrollable = divRef.current && divRef.current.scrollHeight > divRef.current.clientHeight + 2;
+				return {
+					...message,
+					content: fallback,
+					isLoading: false,
+				};
+			}));
+		}
+		finally {
+			setIsGenerating(false);
+			streamAbortRef.current = null;
+			activeAssistantIdRef.current = null;
+			queuedTextRef.current = "";
+			assembledTextRef.current = "";
+			syncBottomState();
+		}
+	};
 
 	return (
-		<div className="relative w-full h-dvh flex flex-col text-default-foreground overflow-hidden">
+		<div className="relative w-full min-h-dvh flex flex-col overflow-hidden text-default-foreground bg-background">
+			<div
+				className="pointer-events-none absolute inset-0 opacity-60"
+				style={{
+					background: "radial-gradient(920px circle at 14% 16%, rgba(217,70,239,0.2), transparent 46%), radial-gradient(760px circle at 84% 10%, rgba(249,115,22,0.14), transparent 44%)",
+				}}
+			/>
+
 			<Navbar/>
-			<main className="flex-1 flex flex-col relative overflow-hidden">
-				<div
-					ref={divRef}
-					className={`absolute inset-0 px-4 sm:px-4 pt-0 space-y-6 overflow-y-auto ${showExtraPadding || isGenerating? "pb-[70vh]" : "pb-0"}`}
-				>
-					{messages.length === 0 ? (
-						<div className="flex flex-col items-center justify-center h-full text-center gap-y-2">
-							<h2 className={`
-								text-3xl font-racing bg-linear-to-r from-purple-400 via-fuchsia-400
-								to-pink-400 text-transparent bg-clip-text bg-size-[200%_200%]
-								animate-gradient-move pb-20 sm:pb-0 
-							`}>
-								{greeting}
+			<main className="relative flex-1 overflow-hidden">
+				{!hasMessages ? (
+					<section className="absolute inset-0 overflow-hidden px-4 sm:px-8 pt-6 pb-44 sm:pb-32">
+						<div className="absolute inset-0 pointer-events-none opacity-75" style={{
+							background: "radial-gradient(640px circle at 24% 12%, rgba(217,70,239,0.2), transparent 58%), radial-gradient(640px circle at 78% 15%, rgba(244,114,182,0.14), transparent 58%)",
+						}} />
+
+						<div className="relative mx-auto h-full w-full max-w-5xl flex flex-col items-center justify-center text-center">
+							<p className="text-xs uppercase tracking-[0.22em] text-fuchsia-400 font-semibold">AlfieAI Events</p>
+							<h2 className="mt-3 text-[clamp(1.1rem,4vw,2.6rem)] sm:whitespace-nowrap font-semibold leading-tight text-foreground px-2">
+								Juniata Involve questions? I can walk you through every step.
 							</h2>
-							
-							<InputBar placeholder="Ask AlfieAI Events..." onSubmit={setQuery}/>
+							<p className="mt-3 max-w-2xl text-default-500 text-sm sm:text-base px-2">
+								Ask about workflows, event registration, forms, attendance tracking, and approvals.
+							</p>
+
+							<div className="mt-8 w-full max-w-4xl px-2">
+								<div className="mx-auto flex flex-wrap justify-center gap-2 sm:gap-3">
+									{starterPrompts.map((prompt) => (
+										<button
+											key={prompt}
+											type="button"
+											onClick={() => {
+												void submitQuery(prompt);
+											}}
+											className="rounded-full border border-default-200 bg-content1/70 backdrop-blur-md hover:bg-content1 px-3 sm:px-4 py-2 text-xs sm:text-sm text-default-700 transition-colors"
+										>
+											{prompt}
+										</button>
+									))}
+								</div>
+							</div>
+
+							<div className="mt-6 w-full max-w-4xl px-2">
+								<InputBar
+									placement="inline"
+									placeholder="Ask AlfieAI Events..."
+									isDisabled={isGenerating}
+									onSubmit={(value, files) => {
+										void submitQuery(value, files);
+									}}
+								/>
+							</div>
 						</div>
-					) : (
-						<ChatContainer className="space-y-4 sm:pb-20 pb-32">
-							{ messages.map(({ content, isLoading }, i) => {
-								const isUser = i % 2 === 0;
+					</section>
+				) : (
+					<div
+						ref={scrollContainerRef}
+						className="absolute inset-0 overflow-y-auto scroll-pb-36 sm:scroll-pb-32 px-4 sm:px-8 pt-2 pb-36 sm:pb-32"
+					>
+						<ChatContainer className="space-y-4 py-3 sm:py-5 sm:pb-10 pb-8">
+							{messages.map((message, index) => {
+								const isUser = message.role === "user";
 
 								return (
-									<div key={i} className="w-full">
+									<div key={message.id} className="w-full">
 										<Message
-											role={isUser? "user" : "model"}
-											isLoading={isLoading}
-											isFirst={isUser && i === 0}
-
-											bubble={{
-												light: "bg-purple-300",
-												dark: "dark:bg-purple-900"
-											}}
-
-											spinner={{
-												color: "secondary",
-												variant: "dots"
+											role={isUser ? "user" : "model"}
+											isLoading={message.isLoading}
+											isFirst={isUser && index === 0}
+											color={{
+												light: "bg-linear-to-br from-fuchsia-100 to-rose-50 border border-fuchsia-200/80",
+												dark: "dark:bg-linear-to-br dark:from-fuchsia-900/45 dark:to-rose-900/30 dark:border-fuchsia-700/50",
 											}}
 										>
-											{content}
+											{isUser ? message.content : <MarkdownRenderer content={message.content} />}
 										</Message>
 									</div>
 								);
 							})}
 						</ChatContainer>
-					)}
-				</div>
+					</div>
+				)}
 
-				{/* Only show ToBottom button if content is scrollable and autoScroll is false */}
-				{!autoScroll && isScrollable && messages.length > 0 && <ToBottomButton/>}
+				{showJumpButton && hasMessages && (
+					<Button
+						className="absolute bottom-36 sm:bottom-10 left-1/2 -translate-x-1/2 text-default-600 backdrop-blur-lg shadow-lg z-20"
+						radius="full"
+						variant="ghost"
+						onPress={() => {
+							shouldAutoScrollRef.current = true;
+							setShowJumpButton(false);
+							scrollToBottom("smooth");
+						}}
+						startContent={<IoIosArrowDown size={24} />}
+						isIconOnly
+					/>
+				)}
 			</main>
 
-			{ messages.length > 0 && <InputBar placeholder="Ask AlfieAI Events..." onSubmit={setQuery}/> }
+			{hasMessages && (
+				<InputBar
+					placeholder="Ask AlfieAI Events..."
+					isDisabled={isGenerating}
+					onSubmit={(value, files) => {
+						void submitQuery(value, files);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

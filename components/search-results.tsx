@@ -73,11 +73,11 @@ export default function SearchResults() {
 									<span className="flex gap-x-2 justify-start items-center">
 										{profile.name}
 										<Link className="cursor-pointer" href={profile.url} target="_blank" rel="noopener noreferrer">
-											<FaLinkedin size={20} className="text-gray-600 hover:text-blue-700" />
+											<FaLinkedin size={20} className="text-gray-600 hover:text-[#0A66C2]"/>
 										</Link>
 									</span>
 								</h2>
-								<p className="text-gray-600"> {getInfo(profile)} </p>
+								<p className="text-default-500"> {getInfo(profile)} </p>
 							</div>
 						</div>
 					))

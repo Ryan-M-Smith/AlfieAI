@@ -32,7 +32,7 @@ export const pages: PageLayout = {
 				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
 					AlfieAI
 					<IoChatboxEllipses size={15}/>
-					<span className="text-primary font-bold">
+					<span className="text-sky-600 font-bold">
 						Chat
 					</span>
 				</span>

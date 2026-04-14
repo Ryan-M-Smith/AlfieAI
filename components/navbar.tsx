@@ -112,7 +112,7 @@ export default function Navbar(): JSX.Element {
 							className="font-medium"
 							radius="full"
 							variant="flat"
-							onPress={() => {
+							onPress={async () => {
 								if (session?.user) {
 									void signOut({ callbackUrl: pathname });
 									return;
@@ -138,7 +138,7 @@ export default function Navbar(): JSX.Element {
 						/>
 					</Link>
 
-					<div className="border-r border-default-400"/>
+					<div className="border-r border-default-400"/> */}
 
 					<Link href="/">
 						<Image
@@ -148,7 +148,7 @@ export default function Navbar(): JSX.Element {
 							width={40}
 							height={40}
 						/>
-					</Link> */}
+					</Link>
 				</div>
 			</header>
 		</>
