@@ -169,17 +169,17 @@
 
 * Introducing AlfieAI Courses
   * Three main features - course catalog, schedule builder, and faculty directory
-* General chat UI and animation polish
-  * Added an upgraded "AlfieAI is ..." loading animation with rotating verbs and smoother text reveal
+* AlfieAI Chat
+  * Added an upgraded "AlfieAI is ..." loading animation featuring 103 thinking verbs and smoother text reveal
   * Loading verbs are now selected randomly with immediate-repeat protection
   * The loading text now uses a continuous animated rainbow text gradient
   * Ellipsis timing now waits until phrase fade-in completes to prevent visual glitches
   * Loading animation styles were moved to a dedicated stylesheet for easier maintenance
-* Input bar refinements
-  * Stabilized control alignment so icons and send button stay visually consistent as the textarea expands
-  * Normalized icon button sizing for improved symmetry across controls
+  * Input bar refinements
+    * Stabilized control alignment so icons and send button stay visually consistent as the textarea expands
+    * Normalized icon button sizing for improved symmetry across controls
 * AlfieAI People
   * Fixed a transition UX issue where the query could clear before the results route finished loading
-* AlfieAI Presence
-  * Updated the events chat visual styling to match the modern chat aesthetic
+* AlfieAI Events
+  * All new chat updates from AlfieAI Chat
   * Refreshed event chat atmospherics and updated user bubble gradients/border treatment
