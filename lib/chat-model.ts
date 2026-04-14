@@ -1,18 +1,18 @@
 //
 // Filename: gemini-model.ts
-// Description: Pass queries to a Gemini 2.5 Flash model running in Google Cloud
+// Description: Pass queries to a Gemini 3 Flash model running in Google Cloud
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
 import * as fs from "node:fs";
 import {
-	CreateChatParameters, GenerateContentConfig, GoogleGenAI,
+	GenerateContentConfig, GoogleGenAI,
 	HarmBlockThreshold, HarmCategory, SafetySetting
 } from "@google/genai";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const modelID = "gemini-3-flash-preview";
+const modelID = process.env.GEMINI_MODEL_ID || "gemini-3-flash-preview";
 
 const context = {
 	text:  fs.readFileSync("prompts/chat.prompt", "utf-8")
@@ -52,72 +52,155 @@ const modelConfig: GenerateContentConfig = {
 	},
 };
 
-const chatConfig: CreateChatParameters = {
-	model: modelID,
-	config: modelConfig, 
-};
+interface StreamAttachment {
+	name: string;
+	mimeType: string;
+	dataBase64: string;
+}
 
-const chat = genAI.chats.create(chatConfig);
+const FALLBACK_CHAT_PROMPTS = [
+	"What events are happening this week at Juniata?",
+	"Help me map a 15-credit schedule for next term.",
+	"Compare CS, data, and bio-related POE options.",
+	"Summarize housing and dining policy highlights.",
+];
 
-export async function generate(query: string) {
-	return new ReadableStream<string>({
+function sanitizeChunkText(value: string): string {
+	return value.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, "");
+}
+
+async function streamModelResponse(query: string, chunkSize = 96, attachments: StreamAttachment[] = []): Promise<ReadableStream<Uint8Array>> {
+	const normalizedChunkSize = Math.max(chunkSize, 32);
+
+	return new ReadableStream<Uint8Array>({
 		start: async (controller) => {
-			const response = await chat.sendMessageStream({
-				message: query
-			});
-		
-			for await (const chunk of response) {
-				if (!chunk.text) {
-					continue;
+			const startedAt = performance.now();
+			const encoder = new TextEncoder();
+			let buffer = "";
+			let firstTokenAt = 0;
+			let hasFlushedOnce = false;
+
+			const flushBuffer = (force = false) => {
+				if (!buffer) {
+					return;
 				}
 
-				const text = chunk.text;
-				const sanitizedText = text.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, "");
-				controller.enqueue(sanitizedText);
-			}
+				if (!force && hasFlushedOnce && buffer.length < normalizedChunkSize) {
+					return;
+				}
 
-			controller.close();
+				controller.enqueue(encoder.encode(buffer));
+				hasFlushedOnce = true;
+				buffer = "";
+			};
+
+			try {
+				const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+
+				if (attachments.length > 0) {
+					parts.push({
+						text: [
+							query,
+							`The user attached ${attachments.length} file(s): ${attachments.map((file) => file.name).join(", ")}.`,
+							"Use the attached files as supporting context when relevant.",
+						].join("\n\n"),
+					});
+
+					for (const attachment of attachments) {
+						parts.push({
+							inlineData: {
+								mimeType: attachment.mimeType || "application/octet-stream",
+								data: attachment.dataBase64,
+							},
+						});
+					}
+				}
+				else {
+					parts.push({ text: query });
+				}
+
+				const response = await genAI.models.generateContentStream({
+					model: modelID,
+					contents: [{ role: "user", parts }],
+					config: modelConfig,
+				});
+
+				for await (const chunk of response) {
+					if (!chunk.text) {
+						continue;
+					}
+
+					if (!firstTokenAt) {
+						firstTokenAt = performance.now();
+					}
+
+					buffer += sanitizeChunkText(chunk.text);
+					flushBuffer();
+				}
+
+				flushBuffer(true);
+				const finishedAt = performance.now();
+				const ttfb = firstTokenAt ? Math.round(firstTokenAt - startedAt) : Math.round(finishedAt - startedAt);
+				const total = Math.round(finishedAt - startedAt);
+				console.log(`[chat-model] TTFB=${ttfb}ms total=${total}ms model=${modelID}`);
+				controller.close();
+			}
+			catch (error) {
+				console.error("[chat-model] Streaming failed", error);
+				controller.error(error);
+			}
 		}
 	});
 }
 
-export async function generateWithChunking(query: string, chunkSize: number) {
-  	return new ReadableStream<string>({
-    	async start(controller) {
-			const startTime = performance.now();
+export async function generate(query: string, attachments: StreamAttachment[] = []) {
+	return streamModelResponse(query, 96, attachments);
+}
 
-			const response = await chat.sendMessageStream({
-				message: query
-			});
+export async function generateWithChunking(query: string, chunkSize: number, attachments: StreamAttachment[] = []) {
+	return streamModelResponse(query, chunkSize, attachments);
+}
 
-			const endTime = performance.now();
-			console.log(`Time taken for sendMessageStream: ${Math.round(endTime - startTime)}ms`);
+function parsePromptLines(value: string): string[] {
+	const parsed = value
+		.split(/\n+/)
+		.map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim())
+		.filter((line) => line.length > 6);
 
-			let buffer = ""; 
+	const unique = [...new Set(parsed)];
+	return unique.slice(0, 4);
+}
 
-			for await (const chunk of response) {
-				if (!chunk.text) {
-					continue;
-				}
+export async function generateStarterPrompts(): Promise<string[]> {
+	try {
+		const response = await genAI.models.generateContent({
+			model: modelID,
+			config: {
+				temperature: 0.9,
+				topP: 0.9,
+				responseModalities: ["TEXT"],
+				systemInstruction: modelConfig.systemInstruction,
+			},
+			contents: [{
+				role: "user",
+				parts: [{
+					text: [
+						"Generate exactly 4 short sample prompts for a Juniata College campus assistant.",
+						"Each prompt should be 8 to 14 words and sound natural for students.",
+						"Return only a plain newline list with one prompt per line.",
+					].join("\n"),
+				}],
+			}],
+		});
 
-				const text = chunk.text;
-				buffer += text;
-				console.log(text);
-
-				// Split the buffer into chunks of the specified size
-				while (buffer.length >= chunkSize) {
-					const chunkToSend = buffer.slice(0, chunkSize);
-					buffer = buffer.slice(chunkSize);
-					controller.enqueue(chunkToSend);
-				}
-			}
-
-			// Send any remaining text in the buffer
-			if (buffer.length > 0) {
-				controller.enqueue(buffer);
-			}
-
-			controller.close();
+		const prompts = parsePromptLines(response.text || "");
+		if (prompts.length >= 4) {
+			return prompts.slice(0, 4);
 		}
-  	});
+	}
+	catch (error) {
+		console.error("[chat-model] Failed to generate starter prompts", error);
+	}
+
+	return FALLBACK_CHAT_PROMPTS;
 }
