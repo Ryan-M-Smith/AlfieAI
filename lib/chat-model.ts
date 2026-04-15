@@ -65,6 +65,10 @@ const FALLBACK_CHAT_PROMPTS = [
 	"Summarize housing and dining policy highlights.",
 ];
 
+function isControllerStateError(error: unknown): boolean {
+	return error instanceof Error && /Invalid state|already closed/i.test(error.message);
+}
+
 function sanitizeChunkText(value: string): string {
 	return value.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, "");
 }
@@ -79,6 +83,26 @@ async function streamModelResponse(query: string, chunkSize = 96, attachments: S
 			let buffer = "";
 			let firstTokenAt = 0;
 			let hasFlushedOnce = false;
+			let controllerOpen = true;
+
+			const safeEnqueue = (text: string): boolean => {
+				if (!text || !controllerOpen) {
+					return false;
+				}
+
+				try {
+					controller.enqueue(encoder.encode(text));
+					return true;
+				}
+				catch (error) {
+					if (isControllerStateError(error)) {
+						controllerOpen = false;
+						return false;
+					}
+
+					throw error;
+				}
+			};
 
 			const flushBuffer = (force = false) => {
 				if (!buffer) {
@@ -89,7 +113,11 @@ async function streamModelResponse(query: string, chunkSize = 96, attachments: S
 					return;
 				}
 
-				controller.enqueue(encoder.encode(buffer));
+				if (!safeEnqueue(buffer)) {
+					buffer = "";
+					return;
+				}
+
 				hasFlushedOnce = true;
 				buffer = "";
 			};
@@ -126,6 +154,10 @@ async function streamModelResponse(query: string, chunkSize = 96, attachments: S
 				});
 
 				for await (const chunk of response) {
+					if (!controllerOpen) {
+						break;
+					}
+
 					if (!chunk.text) {
 						continue;
 					}
@@ -143,11 +175,42 @@ async function streamModelResponse(query: string, chunkSize = 96, attachments: S
 				const ttfb = firstTokenAt ? Math.round(firstTokenAt - startedAt) : Math.round(finishedAt - startedAt);
 				const total = Math.round(finishedAt - startedAt);
 				console.log(`[chat-model] TTFB=${ttfb}ms total=${total}ms model=${modelID}`);
-				controller.close();
+
+				if (controllerOpen) {
+					try {
+						controller.close();
+					}
+					catch (error) {
+						if (!isControllerStateError(error)) {
+							throw error;
+						}
+					}
+					finally {
+						controllerOpen = false;
+					}
+				}
 			}
 			catch (error) {
+				if (isControllerStateError(error)) {
+					controllerOpen = false;
+					return;
+				}
+
 				console.error("[chat-model] Streaming failed", error);
-				controller.error(error);
+
+				if (controllerOpen) {
+					try {
+						controller.error(error);
+					}
+					catch (controllerError) {
+						if (!isControllerStateError(controllerError)) {
+							throw controllerError;
+						}
+					}
+					finally {
+						controllerOpen = false;
+					}
+				}
 			}
 		}
 	});

@@ -71,6 +71,10 @@ export default function ProfessorsView() {
 					body: JSON.stringify({ query: search, department, page, pageSize: 9 }),
 				});
 
+				if (!response.ok) {
+					throw new Error(`Failed to load professors: ${response.status}`);
+				}
+
 				const data = (await response.json()) as ProfessorsResponse;
 				setResults((previous) => {
 					const incoming = data.results || [];
@@ -94,8 +98,17 @@ export default function ProfessorsView() {
 				setTotalResults(data.pagination?.total || 0);
 				setDepartments(data.filters?.departments || []);
 			}
+			catch (error) {
+				if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+					return;
+				}
+
+				console.error("Failed to load professors", error);
+			}
 			finally {
-				setLoading(false);
+				if (!controller.signal.aborted) {
+					setLoading(false);
+				}
 			}
 		}
 
