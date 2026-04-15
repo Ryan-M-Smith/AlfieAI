@@ -1,85 +1,7 @@
-import professorsDirectory from "@/data/professors.json";
 import type { ScheduleCourseResult, ScheduleMeetingBlock, WeekdayCode } from "@/lib/schedule-ai";
-
-interface ProfessorNameRecord {
-	firstName?: string;
-	lastName?: string;
-}
-
-const INSTRUCTOR_NAME_LOOKUP = buildInstructorLookup(professorsDirectory as ProfessorNameRecord[]);
 
 function normalizeWhitespace(value: string): string {
 	return value.trim().replace(/\s+/g, " ");
-}
-
-function normalizeNameToken(value: string): string {
-	return normalizeWhitespace(value)
-		.toLowerCase()
-		.replace(/[^a-z\s]/g, "")
-		.trim();
-}
-
-function buildInstructorLookup(professors: ProfessorNameRecord[]): Map<string, string> {
-	const lookup = new Map<string, string>();
-
-	for (const professor of professors) {
-		const firstRaw = normalizeWhitespace(String(professor.firstName || ""));
-		const lastRaw = normalizeWhitespace(String(professor.lastName || ""));
-		if (!firstRaw || !lastRaw) {
-			continue;
-		}
-
-		const firstToken = normalizeNameToken(firstRaw).split(" ")[0] || "";
-		const lastToken = normalizeNameToken(lastRaw).split(" ")[0] || "";
-		if (!firstToken || !lastToken) {
-			continue;
-		}
-
-		const fullName = `${firstRaw} ${lastRaw}`;
-		lookup.set(`${firstToken} ${lastToken}`, fullName);
-
-		const initial = firstToken.charAt(0);
-		if (initial) {
-			lookup.set(`${initial} ${lastToken}`, fullName);
-		}
-	}
-
-	return lookup;
-}
-
-function instructorLookupKey(value: string): string {
-	const stripped = normalizeWhitespace(value)
-		.replace(/^(dr\.?|prof\.?|professor)\s+/i, "")
-		.replace(/[^a-zA-Z\s]/g, " ")
-		.replace(/\s+/g, " ")
-		.trim()
-		.toLowerCase();
-
-	if (!stripped) {
-		return "";
-	}
-
-	const parts = stripped.split(" ").filter(Boolean);
-	if (parts.length < 2) {
-		return "";
-	}
-
-	const first = parts[0];
-	const last = parts[parts.length - 1];
-	if (!first || !last) {
-		return "";
-	}
-
-	return `${first} ${last}`;
-}
-
-function resolveInstructorName(value: string): string {
-	const normalized = normalizeWhitespace(value);
-	if (!normalized) {
-		return "";
-	}
-
-	return INSTRUCTOR_NAME_LOOKUP.get(instructorLookupKey(normalized)) || normalized;
 }
 
 export function normalizeCourseCode(value: string): string {
@@ -274,7 +196,7 @@ function normalizeCourseForDisplay(course: ScheduleCourseResult): ScheduleCourse
 		...course,
 		section: {
 			...course.section,
-			instructors: course.section.instructors.map(resolveInstructorName).filter(Boolean),
+			instructors: course.section.instructors.map((instructor) => normalizeWhitespace(instructor)).filter(Boolean),
 			meetings: normalizedMeetingBlocks.length > 0
 				? normalizedMeetingBlocks.map(formatMeetingBlock)
 				: [...course.section.meetings],

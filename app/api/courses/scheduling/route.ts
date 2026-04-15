@@ -55,6 +55,17 @@ interface ModelScheduleOutput {
 	};
 }
 
+interface ProfessorNameRecord {
+	firstName?: string;
+	lastName?: string;
+}
+
+const INSTRUCTOR_LOOKUP_TTL_MS = 5 * 60 * 1000;
+let instructorLookupCache: {
+	expiresAt: number;
+	value: Map<string, string>;
+} | null = null;
+
 function getString(formData: FormData, key: string): string {
 	const value = formData.get(key);
 	return typeof value === "string" ? value.trim() : "";
@@ -85,6 +96,114 @@ function parseJsonStringArray(value: string): string[] {
 
 function normalizeCourseCode(code: string): string {
 	return code.trim().toUpperCase();
+}
+
+function normalizeWhitespace(value: string): string {
+	return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeNameToken(value: string): string {
+	return normalizeWhitespace(value)
+		.toLowerCase()
+		.replace(/[^a-z\s]/g, "")
+		.trim();
+}
+
+function buildInstructorLookup(professors: ProfessorNameRecord[]): Map<string, string> {
+	const lookup = new Map<string, string>();
+
+	for (const professor of professors) {
+		const firstRaw = normalizeWhitespace(String(professor.firstName || ""));
+		const lastRaw = normalizeWhitespace(String(professor.lastName || ""));
+		if (!firstRaw || !lastRaw) {
+			continue;
+		}
+
+		const firstToken = normalizeNameToken(firstRaw).split(" ")[0] || "";
+		const lastToken = normalizeNameToken(lastRaw).split(" ")[0] || "";
+		if (!firstToken || !lastToken) {
+			continue;
+		}
+
+		const fullName = `${firstRaw} ${lastRaw}`;
+		lookup.set(`${firstToken} ${lastToken}`, fullName);
+
+		const initial = firstToken.charAt(0);
+		if (initial) {
+			lookup.set(`${initial} ${lastToken}`, fullName);
+		}
+	}
+
+	return lookup;
+}
+
+function instructorLookupKey(value: string): string {
+	const stripped = normalizeWhitespace(value)
+		.replace(/^(dr\.?|prof\.?|professor)\s+/i, "")
+		.replace(/[^a-zA-Z\s]/g, " ")
+		.replace(/\s+/g, " ")
+		.trim()
+		.toLowerCase();
+
+	if (!stripped) {
+		return "";
+	}
+
+	const parts = stripped.split(" ").filter(Boolean);
+	if (parts.length < 2) {
+		return "";
+	}
+
+	const first = parts[0];
+	const last = parts[parts.length - 1];
+	if (!first || !last) {
+		return "";
+	}
+
+	return `${first} ${last}`;
+}
+
+async function getInstructorLookup(professorsCollection: ReturnType<typeof import("mongodb").Db.prototype.collection<ProfessorNameRecord>>) {
+	const now = Date.now();
+
+	if (instructorLookupCache && instructorLookupCache.expiresAt > now) {
+		return instructorLookupCache.value;
+	}
+
+	const professorNameDocs = await professorsCollection
+		.find({}, { projection: { _id: 0, firstName: 1, lastName: 1 } })
+		.toArray();
+
+	const lookup = buildInstructorLookup(professorNameDocs);
+	instructorLookupCache = {
+		expiresAt: now + INSTRUCTOR_LOOKUP_TTL_MS,
+		value: lookup,
+	};
+
+	return lookup;
+}
+
+function resolveCourseInstructorNames(courses: Course[], instructorLookup: Map<string, string>): Course[] {
+	return courses.map((course) => ({
+		...course,
+		sections: (course.sections || []).map((section) => ({
+			...section,
+			instructors: (section.instructors || []).map((instructor) => {
+				const rawName = String(instructor.name || "");
+				const key = instructorLookupKey(rawName);
+				const resolvedName = key ? instructorLookup.get(key) : undefined;
+
+				if (!resolvedName) {
+					return instructor;
+				}
+
+				return {
+					...instructor,
+					name: resolvedName,
+				};
+			}),
+		})),
+	}));
 }
 
 function isMissingModelError(error: unknown): boolean {
@@ -595,6 +714,7 @@ export async function POST(request: NextRequest) {
 		const client = await clientPromise;
 		const db = client.db(process.env.MONGODB_COURSES_DB || "VectorDB");
 		const collection = db.collection<Course>(process.env.MONGODB_COURSES_COLLECTION || "courses");
+		const professorsCollection = db.collection<ProfessorNameRecord>(process.env.MONGODB_PROFESSORS_COLLECTION || "professors");
 
 		const transcriptFile = formData.get("degreeProgressFile") || formData.get("transcriptFile");
 		if (transcriptFile instanceof File && transcriptFile.size > 0) {
@@ -670,22 +790,25 @@ export async function POST(request: NextRequest) {
 			};
 		})();
 
-		const [{ transcriptText, transcriptWarning }, availableCourses] = await Promise.all([
+		const [{ transcriptText, transcriptWarning }, availableCourses, instructorLookup] = await Promise.all([
 			transcriptPromise,
 			availableCoursesPromise,
+			getInstructorLookup(professorsCollection),
 		]);
+
+		const availableCoursesWithResolvedInstructors = resolveCourseInstructorNames(availableCourses, instructorLookup);
 
 		const transcriptEvidence = collectTranscriptEvidence(transcriptText);
 
-		if (availableCourses.length === 0) {
+		if (availableCoursesWithResolvedInstructors.length === 0) {
 			return NextResponse.json({ error: `No course offerings were found for ${term}.` }, { status: 404 });
 		}
 
 		// Remove courses the student already completed from the catalog sent to the model
 		const completedSet = new Set(transcriptEvidence.completedCourseCodes.map(normalizeCourseCode));
 		const filteredCourses = completedSet.size > 0
-			? availableCourses.filter((c) => !completedSet.has(normalizeCourseCode(c.course_code)))
-			: availableCourses;
+			? availableCoursesWithResolvedInstructors.filter((c) => !completedSet.has(normalizeCourseCode(c.course_code)))
+			: availableCoursesWithResolvedInstructors;
 
 		const modelOutput = await generateModelSchedule({
 			term,
@@ -728,8 +851,10 @@ export async function POST(request: NextRequest) {
 			},
 		]).toArray();
 
+		const selectedCoursesWithResolvedInstructors = resolveCourseInstructorNames(selectedCourses, instructorLookup);
+
 		const selectedMap = new Map(
-			selectedCourses.map((course) => [normalizeCourseCode(course.course_code), course])
+			selectedCoursesWithResolvedInstructors.map((course) => [normalizeCourseCode(course.course_code), course])
 		);
 
 		const warnings: string[] = [];
@@ -781,7 +906,7 @@ export async function POST(request: NextRequest) {
 
 		const backupCourses = allSelectedCourses.filter((course) => !course.primary);
 		const notes = [
-			`Term catalog grounding used ${availableCourses.length} available course records for ${term}.`,
+			`Term catalog grounding used ${availableCoursesWithResolvedInstructors.length} available course records for ${term}.`,
 			`Primary POEs used for planning: ${primaryPoes.join(", ")}.`,
 			`AlfieAI selected ${allSelectedCourses.length} matched courses (${primaryCourses.length} primary, ${backupCourses.length} backup).`,
 			transcriptEvidence.transcriptDetected
