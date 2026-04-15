@@ -1,8 +1,6 @@
 "use client";
 
 import {
-	Autocomplete,
-	AutocompleteItem,
 	Button,
 	Input,
 	Link,
@@ -17,11 +15,13 @@ import {
 	Textarea,
 	useDisclosure,
 } from "@heroui/react";
-import { ChangeEvent, Key, useEffect, useState } from "react";
-import { LuCircleHelp, LuFileUp } from "react-icons/lu";
+import { ChangeEvent, Key, use, useEffect, useMemo, useRef, useState } from "react";
+import { GrSchedules } from "react-icons/gr";
+import { LuCircleHelp, LuFileUp, LuPlus, LuSparkles, LuTrash2 } from "react-icons/lu";
 
-import type { DualDegreeStatus, EntryType, StudyAbroadStatus } from "@/lib/gen-ed-rules";
-import type { SchedulePlanningResult } from "@/lib/schedule-planner";
+import ScheduleBuilderResult from "@/components/schedule-builder-result";
+
+import type { ScheduleGenerationResult } from "@/lib/schedule-ai";
 
 interface PlannerOptionsResponse {
 	terms: string[];
@@ -29,95 +29,49 @@ interface PlannerOptionsResponse {
 	warnings?: string[];
 }
 
+interface EmphasisField {
+	id: string;
+	selection: string;
+	customValue: string;
+}
+
 interface PlannerFormState {
 	term: string;
-	poe: string;
-	entryType: EntryType;
-	incomingCredits: string;
-	incomingCompositionCredits: string;
-	targetCredits: string;
-	studyAbroad: StudyAbroadStatus;
-	dualDegree: DualDegreeStatus;
-	legacyBlanketWaiver: boolean;
+	studentPoes: EmphasisField[];
+	guidance: string;
 	openSeatsOnly: boolean;
-	prompt: string;
+	secondaryEmphases: EmphasisField[];
 }
 
-interface AutocompleteOption {
-	key: string;
-	label: string;
+interface ErrorResponse {
+	error?: string;
 }
 
-interface PlannerSettingSwitchProps {
-	label: string;
-	description: string;
-	isSelected: boolean;
-	onValueChange: (value: boolean) => void;
+const OTHER_OPTION_KEY = "__other__";
+
+function newEmphasisField(prefix: "primary" | "secondary"): EmphasisField {
+	const random = Math.random().toString(36).slice(2, 9);
+	return {
+		id: `${prefix}-${Date.now()}-${random}`,
+		selection: "",
+		customValue: "",
+	};
 }
 
 const defaultForm: PlannerFormState = {
 	term: "",
-	poe: "",
-	entryType: "continuing",
-	incomingCredits: "",
-	incomingCompositionCredits: "",
-	targetCredits: "",
-	studyAbroad: "none",
-	dualDegree: "none",
-	legacyBlanketWaiver: false,
+	studentPoes: [],
+	guidance: "",
 	openSeatsOnly: true,
-	prompt: "",
+	secondaryEmphases: [],
 };
 
-function getSuggestedTerm(): string {
-	const now = new Date();
-	const year = now.getFullYear();
-	const month = now.getMonth();
-
-	if (month <= 4) {
-		return `Spring Term ${year}`;
+function resolveChoice(selection: string, customValue: string): string {
+	if (selection === OTHER_OPTION_KEY) {
+		return customValue.trim();
 	}
 
-	if (month <= 6) {
-		return `Summer Term ${year}`;
-	}
-
-	return `Fall Term ${year}`;
-}
-
-function appendIfPresent(formData: FormData, key: string, value: string) {
-	if (value.trim()) {
-		formData.append(key, value.trim());
-	}
-}
-
-function PlannerSettingSwitch({
-	label,
-	description,
-	isSelected,
-	onValueChange,
-}: PlannerSettingSwitchProps) {
-	return (
-		<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3">
-			<Switch
-				isSelected={isSelected}
-				onValueChange={onValueChange}
-				color="secondary"
-				size="sm"
-				classNames={{
-					base: "inline-flex w-full max-w-none flex-row-reverse items-start justify-between gap-3",
-					wrapper: "mt-0 bg-default-200 group-data-[selected=true]:bg-secondary-500",
-					thumb: "bg-white shadow-sm",
-					label: "w-full flex-1",
-				}}
-			>
-				<div className="text-left">
-					<p className="font-medium text-default-800">{label}</p>
-					<p className="text-xs text-default-500">{description}</p>
-				</div>
-			</Switch>
-		</div>
-	);
+	return selection.trim();
 }
 
 export default function ScheduleBuilder() {
@@ -126,12 +80,37 @@ export default function ScheduleBuilder() {
 	const [poes, setPoes] = useState<string[]>([]);
 	const [loadingOptions, setLoadingOptions] = useState(true);
 	const [loadingPlan, setLoadingPlan] = useState(false);
+	const [loadingGuidance, setLoadingGuidance] = useState(false);
 	const [error, setError] = useState("");
 	const [optionsWarning, setOptionsWarning] = useState("");
-	const [result, setResult] = useState<SchedulePlanningResult | null>(null);
-	const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+	const [result, setResult] = useState<ScheduleGenerationResult | null>(null);
+	const [degreeProgressFile, setDegreeProgressFile] = useState<File | null>(null);
+	const [activeView, setActiveView] = useState<"form" | "result">("form");
+	const guidanceAbortRef = useRef<AbortController | null>(null);
 	const { isOpen, onOpen, onOpenChange } = useDisclosure();
-	const poeOptions: AutocompleteOption[] = poes.map((poe) => ({ key: poe, label: poe }));
+	const poeSelectOptions = useMemo(
+		() => [
+			...poes.map((poe) => ({ key: poe, label: poe })),
+			{ key: OTHER_OPTION_KEY, label: "Other (custom)" },
+		],
+		[poes],
+	);
+
+	const resolvedPrimaryPoes = useMemo(
+		() => Array.from(new Set(
+			form.studentPoes
+				.map((item) => resolveChoice(item.selection, item.customValue))
+				.filter(Boolean),
+		)),
+		[form.studentPoes],
+	);
+	const resolvedPoe = resolvedPrimaryPoes[0] || "";
+	const resolvedSecondaryEmphases = useMemo(
+		() => form.secondaryEmphases
+			.map((item) => resolveChoice(item.selection, item.customValue))
+			.filter(Boolean),
+		[form.secondaryEmphases],
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -159,16 +138,12 @@ export default function ScheduleBuilder() {
 				setForm((previous) => ({
 					...previous,
 					term: loadedTerms.includes(previous.term) ? previous.term : (loadedTerms[0] || ""),
-					poe: previous.poe || loadedPoes[0] || "",
+					studentPoes: previous.studentPoes,
 				}));
 			}
 			catch {
 				if (!cancelled) {
 					setOptionsWarning("Could not load planner terms from the database. Term selection is currently unavailable.");
-					setForm((previous) => ({
-						...previous,
-						term: "",
-					}));
 				}
 			}
 			finally {
@@ -184,35 +159,187 @@ export default function ScheduleBuilder() {
 		};
 	}, []);
 
-	function updateField<K extends keyof PlannerFormState>(field: K, value: PlannerFormState[K]) {
+	useEffect(() => {
+		return () => {
+			guidanceAbortRef.current?.abort();
+		};
+	}, []);
+
+	function updateForm<K extends keyof PlannerFormState>(field: K, value: PlannerFormState[K]) {
 		setForm((previous) => ({ ...previous, [field]: value }));
 	}
 
-	function handleTranscriptChange(event: ChangeEvent<HTMLInputElement>) {
+	function handleDegreeProgressChange(event: ChangeEvent<HTMLInputElement>) {
 		const nextFile = event.target.files?.[0] || null;
-		setTranscriptFile(nextFile);
+		setDegreeProgressFile(nextFile);
+	}
+
+	function addPrimaryPoe() {
+		setForm((previous) => ({
+			...previous,
+			studentPoes: [...previous.studentPoes, newEmphasisField("primary")],
+		}));
+	}
+
+	function removePrimaryPoe(id: string) {
+		setForm((previous) => {
+			const remaining = previous.studentPoes.filter((item) => item.id !== id);
+			return {
+				...previous,
+				studentPoes: remaining,
+			};
+		});
+	}
+
+	function updatePrimaryPoe(id: string, next: Partial<EmphasisField>) {
+		setForm((previous) => ({
+			...previous,
+			studentPoes: previous.studentPoes.map((item) => (
+				item.id === id ? { ...item, ...next } : item
+			)),
+		}));
+	}
+
+	function addSecondaryEmphasis() {
+		setForm((previous) => ({
+			...previous,
+			secondaryEmphases: [...previous.secondaryEmphases, newEmphasisField("secondary")],
+		}));
+	}
+
+	function removeSecondaryEmphasis(id: string) {
+		setForm((previous) => ({
+			...previous,
+			secondaryEmphases: previous.secondaryEmphases.filter((item) => item.id !== id),
+		}));
+	}
+
+	function updateSecondaryEmphasis(id: string, next: Partial<EmphasisField>) {
+		setForm((previous) => ({
+			...previous,
+			secondaryEmphases: previous.secondaryEmphases.map((item) => (
+				item.id === id ? { ...item, ...next } : item
+			)),
+		}));
+	}
+
+	async function generateGuidanceDraft() {
+		guidanceAbortRef.current?.abort();
+		const abortController = new AbortController();
+		guidanceAbortRef.current = abortController;
+
+		setLoadingGuidance(true);
+		setError("");
+		updateForm("guidance", "");
+
+		try {
+			if (!form.term.trim()) {
+				throw new Error("Choose a term before generating guidance.");
+			}
+			if (resolvedPrimaryPoes.length === 0) {
+				throw new Error("Add at least one primary POE before generating guidance.");
+			}
+
+			const response = await fetch("/api/courses/scheduling/insights", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				signal: abortController.signal,
+				body: JSON.stringify({
+					term: form.term,
+					primaryPoes: resolvedPrimaryPoes,
+					poe: resolvedPoe,
+					secondaryEmphases: resolvedSecondaryEmphases,
+					currentGuidance: form.guidance,
+					stream: true,
+				}),
+			});
+
+			if (!response.ok) {
+				const contentType = response.headers.get("content-type") || "";
+				if (contentType.includes("application/json")) {
+					const data = (await response.json()) as ErrorResponse;
+					throw new Error(data.error || "Could not generate guidance draft.");
+				}
+
+				const rawError = await response.text();
+				throw new Error(rawError || "Could not generate guidance draft.");
+			}
+
+			if (!response.body) {
+				const fallbackRaw = await response.text();
+				const fallbackText = fallbackRaw.trim();
+				if (!fallbackText) {
+					throw new Error("Could not generate guidance draft.");
+				}
+
+				updateForm("guidance", fallbackText);
+				return;
+			}
+
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let guidanceText = "";
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) {
+					break;
+				}
+
+				const chunkText = decoder.decode(value, { stream: true });
+				if (!chunkText) {
+					continue;
+				}
+
+				guidanceText += chunkText;
+				setForm((previous) => ({ ...previous, guidance: guidanceText }));
+			}
+
+			guidanceText += decoder.decode();
+			if (!guidanceText.trim()) {
+				throw new Error("Could not generate guidance draft.");
+			}
+		}
+		catch (guidanceError) {
+			if (guidanceError instanceof Error && guidanceError.name === "AbortError") {
+				return;
+			}
+
+			setError((guidanceError as Error).message || "Could not generate guidance draft.");
+		}
+		finally {
+			if (guidanceAbortRef.current === abortController) {
+				guidanceAbortRef.current = null;
+			}
+
+			setLoadingGuidance(false);
+		}
 	}
 
 	async function generateSchedule() {
 		setLoadingPlan(true);
 		setError("");
+		setResult(null);
+		setActiveView("result");
 
 		try {
-			const formData = new FormData();
-			formData.append("term", form.term);
-			formData.append("poe", form.poe);
-			formData.append("entryType", form.entryType);
-			formData.append("studyAbroad", form.studyAbroad);
-			formData.append("dualDegree", form.dualDegree);
-			formData.append("legacyBlanketWaiver", String(form.legacyBlanketWaiver));
-			formData.append("openSeatsOnly", String(form.openSeatsOnly));
-			appendIfPresent(formData, "incomingCredits", form.incomingCredits);
-			appendIfPresent(formData, "incomingCompositionCredits", form.incomingCompositionCredits);
-			appendIfPresent(formData, "targetCredits", form.targetCredits);
-			appendIfPresent(formData, "prompt", form.prompt);
+			if (!form.term.trim()) {
+				throw new Error("Please choose a term.");
+			}
+			if (resolvedPrimaryPoes.length === 0) {
+				throw new Error("Please add at least one primary POE.");
+			}
 
-			if (transcriptFile) {
-				formData.append("transcriptFile", transcriptFile);
+			const formData = new FormData();
+			formData.append("term", form.term.trim());
+			formData.append("primaryPoes", JSON.stringify(resolvedPrimaryPoes));
+			formData.append("poe", resolvedPoe);
+			formData.append("secondaryEmphases", JSON.stringify(resolvedSecondaryEmphases));
+			formData.append("guidance", form.guidance.trim());
+			formData.append("openSeatsOnly", String(form.openSeatsOnly));
+
+			if (degreeProgressFile) {
+				formData.append("degreeProgressFile", degreeProgressFile);
 			}
 
 			const response = await fetch("/api/courses/scheduling", {
@@ -225,7 +352,7 @@ export default function ScheduleBuilder() {
 				throw new Error(data.error || "Failed to generate schedule.");
 			}
 
-			setResult(data as SchedulePlanningResult);
+			setResult(data as ScheduleGenerationResult);
 		}
 		catch (plannerError) {
 			setResult(null);
@@ -236,414 +363,327 @@ export default function ScheduleBuilder() {
 		}
 	}
 
+	function handleBackToPlanner() {
+		setActiveView("form");
+		setError("");
+	}
+
+	if (activeView === "result") {
+		return (
+			<ScheduleBuilderResult
+				error={error}
+				loading={loadingPlan}
+				onBack={handleBackToPlanner}
+				result={result}
+			/>
+		);
+	}
+
 	return (
-		<div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pb-10">
-			<div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-5">
-				<section className="rounded-3xl border border-default-200 bg-content1/70 p-5 sm:p-7 shadow-sm">
-					<div className="flex flex-col gap-2">
-						<p className="text-xs font-semibold uppercase tracking-[0.22em] text-purple-400">AlfieAI Courses</p>
-						<h2 className="text-2xl sm:text-3xl font-semibold">Build a requirement-aware schedule for one specific term.</h2>
-						<p className="text-default-600">
-							Choose a term, upload an unofficial transcript PDF if you have one, and let AlfieAI Courses
-							balance waivers, remaining gen-ed coverage, available offerings, and section conflicts.
-						</p>
-					</div>
-
-					<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-						<Select
-							label="Term"
-							labelPlacement="outside"
-							selectedKeys={form.term ? [form.term] : []}
-							onSelectionChange={(keys) => {
-								const selected = Array.from(keys as Set<Key>)[0];
-								if (selected) {
-									updateField("term", String(selected));
-								}
-							}}
-							isDisabled={loadingOptions || terms.length === 0}
-							placeholder={loadingOptions ? "Loading available terms..." : "Select a term"}
-						>
-							{terms.map((term) => (
-								<SelectItem key={term}>{term}</SelectItem>
-							))}
-						</Select>
-
-						<Autocomplete
-							label="POE / Major"
-							labelPlacement="outside"
-							defaultItems={poeOptions}
-							inputValue={form.poe}
-							onInputChange={(value) => updateField("poe", value)}
-							onSelectionChange={(key) => {
-								if (key) {
-									updateField("poe", String(key));
-								}
-							}}
-							allowsCustomValue
-							placeholder="Select or type a POE"
-						>
-							{(item) => <AutocompleteItem key={item.key}>{item.label}</AutocompleteItem>}
-						</Autocomplete>
-
-						<Select
-							label="Student status"
-							labelPlacement="outside"
-							selectedKeys={[form.entryType]}
-							onSelectionChange={(keys) => {
-								const selected = Array.from(keys as Set<Key>)[0];
-								if (selected) {
-									updateField("entryType", String(selected) as EntryType);
-								}
-							}}
-						>
-							<SelectItem key="continuing">Continuing Juniata student</SelectItem>
-							<SelectItem key="first-year">Incoming first-year student</SelectItem>
-							<SelectItem key="transfer">Incoming transfer student</SelectItem>
-						</Select>
-
-						<Input
-							type="number"
-							label="Target credits"
-							labelPlacement="outside"
-							placeholder="15"
-							value={form.targetCredits}
-							onValueChange={(value) => updateField("targetCredits", value)}
-						/>
-
-						<Input
-							type="number"
-							label="Incoming credits before Juniata"
-							labelPlacement="outside"
-							placeholder="24"
-							value={form.incomingCredits}
-							onValueChange={(value) => updateField("incomingCredits", value)}
-						/>
-
-						<Input
-							type="number"
-							label="Incoming English comp / seminar credits"
-							labelPlacement="outside"
-							placeholder="6"
-							value={form.incomingCompositionCredits}
-							onValueChange={(value) => updateField("incomingCompositionCredits", value)}
-						/>
-
-						<Select
-							label="Study abroad status"
-							labelPlacement="outside"
-							selectedKeys={[form.studyAbroad]}
-							onSelectionChange={(keys) => {
-								const selected = Array.from(keys as Set<Key>)[0];
-								if (selected) {
-									updateField("studyAbroad", String(selected) as StudyAbroadStatus);
-								}
-							}}
-						>
-							<SelectItem key="none">None</SelectItem>
-							<SelectItem key="semester">Semester abroad</SelectItem>
-							<SelectItem key="year">Academic year abroad</SelectItem>
-						</Select>
-
-						<Select
-							label="Dual-degree status"
-							labelPlacement="outside"
-							selectedKeys={[form.dualDegree]}
-							onSelectionChange={(keys) => {
-								const selected = Array.from(keys as Set<Key>)[0];
-								if (selected) {
-									updateField("dualDegree", String(selected) as DualDegreeStatus);
-								}
-							}}
-						>
-							<SelectItem key="none">None</SelectItem>
-							<SelectItem key="domestic">3+ dual degree (domestic partner)</SelectItem>
-							<SelectItem key="abroad">3+ dual degree (abroad partner)</SelectItem>
-						</Select>
-					</div>
-
-					<div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-						<PlannerSettingSwitch
-							label="Legacy blanket waiver"
-							description="Entered Juniata in 2019 FA, 2020 SP, 2020 FA, or 2021 SP."
-							isSelected={form.legacyBlanketWaiver}
-							onValueChange={(value) => updateField("legacyBlanketWaiver", value)}
-						/>
-
-						<PlannerSettingSwitch
-							label="Prefer open sections only"
-							description="Skip closed and waitlisted sections whenever possible."
-							isSelected={form.openSeatsOnly}
-							onValueChange={(value) => updateField("openSeatsOnly", value)}
-						/>
-					</div>
-
-					{optionsWarning && (
-						<div className="mt-5 rounded-2xl border border-warning-200 bg-warning-50/70 px-4 py-3 text-sm text-warning-900">
-							{optionsWarning}
-						</div>
-					)}
-
-					<div className="mt-5 space-y-4">
-						<div className="rounded-2xl border border-default-200 bg-default-50/70 p-4">
-							<div className="flex items-center justify-between gap-3">
-								<div>
-									<p className="text-sm font-medium text-default-700">Transcript upload</p>
-									<p className="text-xs text-default-500">Upload a Juniata unofficial transcript PDF for course recognition.</p>
-								</div>
-								<Button variant="light" startContent={<LuCircleHelp size={16} />} onPress={onOpen}>
-									Help
-								</Button>
-							</div>
-
-							<Input
-								className="mt-4"
-								type="file"
-								accept="application/pdf,.pdf"
-								label="Unofficial transcript PDF"
-								labelPlacement="outside"
-								onChange={handleTranscriptChange}
-								startContent={<LuFileUp size={16} />}
-								description={transcriptFile ? `Selected: ${transcriptFile.name}` : "Optional. PDF only."}
-							/>
-						</div>
-
-						<Textarea
-							label="Goals and scheduling preferences"
-							labelPlacement="outside"
-							placeholder="Examples: I want around 15 credits, no Friday classes, afternoons only, and I need more CS plus any gen-ed coverage I still have left."
-							minRows={6}
-							value={form.prompt}
-							onValueChange={(value) => updateField("prompt", value)}
-						/>
-					</div>
-
-					<div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
-						<Button
-							color="secondary"
-							size="lg"
-							onPress={() => void generateSchedule()}
-							isLoading={loadingPlan}
-							isDisabled={!form.term.trim()}
-						>
-							Generate Optimal Schedule
-						</Button>
-						<p className="text-sm text-default-500">
-							The planner uses your Juniata gen-ed waiver charts, completed work, and current term offerings.
-						</p>
-					</div>
-				</section>
-
-				<section className="rounded-3xl border border-default-200 dark:border-default-600 bg-linear-to-br from-purple-50/75 via-content1/85 to-default-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-slate-950 p-5 sm:p-7">
-					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-purple-500 dark:text-purple-300">Schedule Preview</p>
-					<h3 className="mt-2 text-2xl font-semibold text-foreground">Recommended schedule</h3>
-
-					{error && (
-						<div className="mt-4 rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-700">
-							{error}
-						</div>
-					)}
-
-					{!result && !loadingPlan && !error && (
-						<div className="mt-4 rounded-2xl border border-dashed border-default-300 dark:border-default-600 bg-default-50/70 dark:bg-zinc-900/60 px-5 py-5 text-sm text-foreground/90">
-							Your result will show recognized completed courses, applied waivers, a suggested term schedule, remaining requirements, and backup options.
-						</div>
-					)}
-
-					{loadingPlan && (
-						<div className="mt-4 rounded-2xl border border-secondary-200 bg-secondary-50/80 px-5 py-5">
-							<p className="text-sm font-medium text-secondary-700">AlfieAI is building the schedule.</p>
-							<p className="mt-1 text-sm text-secondary-900">
-								Checking remaining gen-ed categories, waiver eligibility, available sections, and time conflicts.
-							</p>
-						</div>
-					)}
-
-					{result && (
-						<div className="mt-4 space-y-5">
-							<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-								<div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-default-500">
-									<span>{result.term}</span>
-									<span>•</span>
-									<span>{result.schedule.totalCredits} credits</span>
-									<span>•</span>
-									<span>{result.schedule.courseCount} courses</span>
-								</div>
-								<p className="mt-2 text-lg font-semibold">Recognized profile</p>
-								<div className="mt-3 flex flex-wrap gap-2 text-sm">
-									<span className="rounded-full bg-default-100 px-3 py-1">Target: {result.recognized.targetCredits} credits</span>
-									<span className="rounded-full bg-default-100 px-3 py-1">Target load: {result.recognized.targetCourseCount} courses</span>
-									{result.recognized.preferredDepartments.map((department) => (
-										<span key={department} className="rounded-full bg-secondary-100 px-3 py-1 text-secondary-700">{department}</span>
-									))}
-								</div>
-								{result.recognized.completedCourseCodes.length > 0 && (
-									<p className="mt-3 text-sm text-default-600">
-										<strong>Completed courses recognized:</strong> {result.recognized.completedCourseCodes.join(", ")}
-									</p>
-								)}
-								{result.recognized.requestedCourseCodes.length > 0 && (
-									<p className="mt-2 text-sm text-default-600">
-										<strong>Requested courses recognized:</strong> {result.recognized.requestedCourseCodes.join(", ")}
-									</p>
-								)}
-							</div>
-
-							{result.waiverSummary.length > 0 && (
-								<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-									<p className="text-lg font-semibold">Applied waivers and assumptions</p>
-									<div className="mt-3 space-y-2 text-sm text-default-700">
-										{result.waiverSummary.map((item) => (
-											<p key={item}>{item}</p>
-										))}
-									</div>
-								</div>
-							)}
-
-							{result.poeProgress && (
-								<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-									<div className="flex flex-col gap-2">
-										<p className="text-lg font-semibold">{result.poeProgress.poe} POE progress</p>
-										<p className="text-sm text-default-600">
-											Using {result.poeProgress.catalogSource}. Catalog credit total: {result.poeProgress.poeCreditTotal}
-											{typeof result.poeProgress.minimumUpperLevelCredits === "number" ? ` • ${result.poeProgress.minimumUpperLevelCredits}+ upper-level credits required` : ""}
-										</p>
-									</div>
-
-									<div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-										{result.poeProgress.requirements.map((requirement) => (
-											<div key={requirement.id} className="rounded-2xl bg-default-50 px-4 py-3 text-sm">
-												<div className="flex items-center justify-between gap-3">
-													<p className="font-medium">{requirement.label}</p>
-													<span className="rounded-full bg-default-100 px-2 py-1 text-[11px] uppercase tracking-wide text-default-600">
-														{requirement.status.replace("_", " ")}
-													</span>
-												</div>
-												<p className="mt-2 text-default-600">Required: {requirement.required}</p>
-												<p className="text-default-600">Completed: {requirement.completed}</p>
-												<p className="text-default-600">Planned now: {requirement.planned}</p>
-												<p className="text-default-600">Remaining: {requirement.remaining}</p>
-											</div>
-										))}
-									</div>
-
-									{result.poeProgress.notes.length > 0 && (
-										<div className="mt-4 space-y-2 text-sm text-default-700">
-											{result.poeProgress.notes.map((note) => (
-												<p key={note}>{note}</p>
-											))}
-										</div>
-									)}
-								</div>
-							)}
-
-							<div className="space-y-3">
-								{result.schedule.courses.map((course) => (
-									<article key={`${course.courseCode}-${course.section.sectionName}`} className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-										<div className="flex flex-col gap-2">
-											<div className="flex flex-wrap items-center justify-between gap-2">
-												<div>
-													<p className="text-lg font-semibold">{course.courseCode}: {course.title}</p>
-													<p className="text-sm text-default-500">
-														{course.credits} credits • Section {course.section.sectionName} • {course.section.term}
-													</p>
-												</div>
-												<span className="rounded-full bg-default-100 px-3 py-1 text-sm">
-													{course.section.openSeats} open / {course.section.capacity} seats
-												</span>
-											</div>
-
-											<div className="flex flex-wrap gap-2 text-xs">
-												{course.categories.map((category) => (
-													<span key={`${course.courseCode}-${category}`} className="rounded-full bg-secondary-100 px-3 py-1 text-secondary-700">
-														{category}
-													</span>
-												))}
-											</div>
-
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-default-700">
-												<p><strong>Location:</strong> {course.section.location || "TBA"}</p>
-												<p><strong>Instructor{course.section.instructors.length === 1 ? "" : "s"}:</strong> {course.section.instructors.join(", ") || "TBA"}</p>
-												<p className="sm:col-span-2"><strong>Meetings:</strong> {course.section.meetings.join(" | ") || "TBA"}</p>
-											</div>
-
-											<div className="rounded-xl bg-default-50 px-4 py-3 text-sm text-default-700">
-												<strong>Why it made the plan:</strong> {course.reasons.join(" ")}
-											</div>
-										</div>
-									</article>
-								))}
-							</div>
-
-							<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-								<p className="text-lg font-semibold">Requirement progress</p>
-								<div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-									{result.requirements.map((requirement) => (
-										<div key={requirement.id} className="rounded-2xl bg-default-50 px-4 py-3 text-sm">
-											<p className="font-medium">{requirement.label}</p>
-											<p className="mt-1 text-default-600">
-												Required now: {requirement.required} • Completed before plan: {requirement.completedBeforePlan}
-											</p>
-											<p className="text-default-600">
-												Planned now: {requirement.plannedNow} • Waived: {requirement.waived} • Remaining: {requirement.remainingAfterPlan}
-											</p>
-										</div>
-									))}
-								</div>
-							</div>
-
-							{result.alternatives.length > 0 && (
-								<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-									<p className="text-lg font-semibold">Backup options</p>
-									<div className="mt-3 space-y-4">
-										{result.alternatives.map((alternative) => (
-											<div key={alternative.requirement}>
-												<p className="font-medium">{alternative.requirement}</p>
-												<div className="mt-2 space-y-2">
-													{alternative.options.map((option) => (
-														<div key={`${alternative.requirement}-${option.courseCode}`} className="rounded-xl bg-default-50 px-4 py-3 text-sm text-default-700">
-															<p className="font-medium">{option.courseCode}: {option.title}</p>
-															<p>{option.credits} credits • {option.reason}</p>
-															<p>{option.meetings.join(" | ") || "TBA"}</p>
-														</div>
-													))}
-												</div>
-											</div>
-										))}
-									</div>
-								</div>
-							)}
-
-							{result.warnings.length > 0 && (
-								<div className="rounded-2xl border border-warning-200 bg-warning-50/80 p-4">
-									<p className="text-lg font-semibold text-warning-800">Warnings</p>
-									<div className="mt-3 space-y-2 text-sm text-warning-900">
-										{result.warnings.map((warning) => (
-											<p key={warning}>{warning}</p>
-										))}
-									</div>
-								</div>
-							)}
-
-							<div className="rounded-2xl border border-default-200 bg-content1/80 p-4">
-								<p className="text-lg font-semibold">Notes</p>
-								<div className="mt-3 space-y-2 text-sm text-default-700">
-									{result.notes.map((note) => (
-										<p key={note}>{note}</p>
-									))}
-								</div>
-							</div>
-						</div>
-					)}
-				</section>
+		<div className="w-full max-w-7xl mx-auto flex flex-col gap-10 mb-4">
+			<div className="pt-1">
+				<h1 className="text-center">
+					<span className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-3xl leading-tight sm:gap-x-3 sm:text-6xl">
+						<span>AlfieAI</span>
+						<GrSchedules className="shrink-0 text-[22px] sm:text-[34px]" />
+						<span className="font-chalkboard text-purple-400">Schedule Builder</span>
+					</span>
+				</h1>
 			</div>
+
+			<section className="flex flex-col gap-6 rounded-3xl border border-default-200 bg-content1/80 p-5 shadow-sm dark:border-default-600 dark:bg-zinc-900/80 sm:p-7">
+				<div className="flex flex-col gap-2">
+					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-purple-500 dark:text-purple-300">Welcome to AlfieAI's Schedule Builder </p>
+					<h2 className="text-2xl font-semibold text-foreground sm:text-3xl">Tell AlfieAI what matters for next semester.</h2>
+					<span className="flex gap-2 items-center text-md font-medium text-foreground/80 sm:text-xl">
+						Your degree. Your schedule. Your vibe.
+						<LuSparkles/>
+					</span>
+					<p className="text-sm text-default-600 dark:text-default-500">
+						Tell AlfieAI what you study, pick a term from available offerings, upload your Self-Service Degree Progress PDF,
+						and add preferences for the model. AlfieAI will use your information to generate an optimal, personalized schedule
+						for the upcoming term based on your unique academic history and preferences.
+					</p>
+				</div>
+
+				<div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+					<div className="flex flex-col gap-4 rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/60 sm:p-5">
+						<div className="flex flex-col gap-1">
+							<p className="text-sm font-medium text-foreground">Academic emphases</p>
+							<p className="text-xs text-default-600 dark:text-default-500">Choose your POE(s), then optionally add secondary emphases.</p>
+						</div>
+
+						<div className="flex flex-col gap-5">
+							<div className="flex flex-col">
+								<div className="flex items-center justify-between gap-1">
+									<p className="text-sm font-medium text-foreground">
+										What is your primary area of study?
+									</p>
+
+									<Button size="sm" color="secondary" startContent={<LuPlus size={14} />} onPress={addPrimaryPoe}>
+										Add POE
+									</Button>
+								</div>
+
+								<div className="flex flex-col gap-3">
+									{form.studentPoes.length === 0 ? (
+										<p className="text-xs text-default-600 dark:text-default-500">No POEs added yet. Click Add POE to start.</p>
+									) : form.studentPoes.map((item) => (
+										<div className="flex flex-col gap-3" key={item.id}>
+											<div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
+												<Select
+													label={form.studentPoes.length > 1? `POE ${form.studentPoes.indexOf(item) + 1}` : "POE"}
+													labelPlacement="outside"
+													items={poeSelectOptions}
+													selectedKeys={item.selection ? [item.selection] : []}
+													onSelectionChange={(keys) => {
+														const selected = Array.from(keys as Set<Key>)[0];
+														if (!selected) {
+															return;
+														}
+
+														const nextSelection = String(selected);
+														updatePrimaryPoe(item.id, {
+															selection: nextSelection,
+															customValue: nextSelection === OTHER_OPTION_KEY ? item.customValue : "",
+														});
+													}}
+													isDisabled={poes.length === 0 && !loadingOptions}
+													placeholder="Choose a POE"
+												>
+													{(option) => <SelectItem key={option.key}>{option.label}</SelectItem>}
+												</Select>
+
+												<Button
+													variant="flat"
+													color="danger"
+													startContent={<LuTrash2 size={14} />}
+													onPress={() => removePrimaryPoe(item.id)}
+												>
+													Remove
+												</Button>
+											</div>
+
+											{item.selection === OTHER_OPTION_KEY && (
+												<Input
+													label="Custom primary POE"
+													labelPlacement="outside"
+													placeholder="Type a primary POE"
+													value={item.customValue}
+													onValueChange={(value) => updatePrimaryPoe(item.id, { customValue: value })}
+												/>
+											)}
+										</div>
+									))}
+								</div>
+							</div>
+
+							<div className="flex flex-col">
+								<div className="flex items-center justify-between gap-1">
+									<p className="text-sm font-medium text-foreground">Do you have any secondary fields of study?</p>
+									<Button size="sm" color="secondary" startContent={<LuPlus size={14} />} onPress={addSecondaryEmphasis}>
+										Add secondary
+									</Button>
+								</div>
+
+								{form.secondaryEmphases.length === 0 ? (
+									<p className="text-xs text-default-600 dark:text-default-500">No secondary emphases added yet.</p>
+								) : (
+									<div className="flex flex-col gap-3">
+										{form.secondaryEmphases.map((item, index) => (
+											<div className="flex flex-col gap-3" key={item.id}>
+												<div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
+													<Select
+														label={form.studentPoes.length > 1? `Secondary Emphasis ${form.studentPoes.indexOf(item) + 1}` : "Secondary Emphasis"}
+														labelPlacement="outside"
+														items={poeSelectOptions}
+														selectedKeys={item.selection ? [item.selection] : []}
+														onSelectionChange={(keys) => {
+															const selected = Array.from(keys as Set<Key>)[0];
+															if (!selected) {
+																return;
+															}
+
+															const nextSelection = String(selected);
+															updateSecondaryEmphasis(item.id, {
+																selection: nextSelection,
+																customValue: nextSelection === OTHER_OPTION_KEY ? item.customValue : "",
+															});
+														}}
+														placeholder="Choose a secondary emphasis"
+													>
+														{(option) => <SelectItem key={option.key}>{option.label}</SelectItem>}
+													</Select>
+
+													<Button
+														variant="flat"
+														color="danger"
+														startContent={<LuTrash2 size={14} />}
+														onPress={() => removeSecondaryEmphasis(item.id)}
+													>
+														Remove
+													</Button>
+												</div>
+
+												{item.selection === OTHER_OPTION_KEY && (
+													<Input
+														label="Custom secondary emphasis"
+														labelPlacement="outside"
+														placeholder="Type a secondary emphasis"
+														value={item.customValue}
+														onValueChange={(value) => updateSecondaryEmphasis(item.id, { customValue: value })}
+													/>
+												)}
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-4 rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/60 sm:p-5">
+						<div className="flex items-center justify-between gap-3">
+							<div>
+								<p className="text-sm font-medium text-foreground">Self-Service Degree Progress</p>
+								<p className="text-xs text-default-600 dark:text-default-500">Upload your degree progress PDF so AlfieAI can ground recommendations in completed work.</p>
+							</div>
+							<Button variant="light" startContent={<LuCircleHelp size={16} />} onPress={onOpen}>
+								Help
+							</Button>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<p className="text-sm font-medium text-foreground">Degree Progress PDF</p>
+							<div className="flex items-center gap-3">
+								<Button
+									size="sm"
+									variant="flat"
+									startContent={<LuFileUp size={15} />}
+									onPress={() => { document.getElementById("degree-progress-file-input")?.click(); }}
+								>
+									{degreeProgressFile ? "Replace file" : "Choose PDF"}
+								</Button>
+								<input
+									id="degree-progress-file-input"
+									type="file"
+									accept="application/pdf,.pdf"
+									className="sr-only"
+									onChange={handleDegreeProgressChange}
+								/>
+								{degreeProgressFile ? (
+									<div className="flex min-w-0 flex-1 items-center gap-2">
+										<span className="truncate text-sm text-foreground">{degreeProgressFile.name}</span>
+										<Button
+											className="shrink-0 border-none"
+											color="danger"
+											variant="ghost"
+											aria-label="Remove file"
+											size="sm"
+											radius="md"
+											onPress={() => setDegreeProgressFile(null)}
+											startContent={<LuTrash2 size={14} />}
+											isIconOnly
+										/>
+									</div>
+								) : (
+									<span className="text-sm text-default-500 dark:text-default-600">No file selected · PDF only</span>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div className="max-w-md">
+					<Select
+						label="Term"
+						labelPlacement="outside"
+						selectedKeys={form.term ? [form.term] : []}
+						onSelectionChange={(keys) => {
+							const selected = Array.from(keys as Set<Key>)[0];
+							if (selected) {
+								updateForm("term", String(selected));
+							}
+						}}
+						isDisabled={loadingOptions || terms.length === 0}
+						placeholder={loadingOptions ? "Loading available terms..." : "Select a term"}
+					>
+						{terms.map((term) => (
+							<SelectItem key={term}>{term}</SelectItem>
+						))}
+					</Select>
+				</div>
+
+				<div className="flex flex-col gap-4">
+					<Textarea
+						label="What are your academic goals for next semester?"
+						labelPlacement="outside"
+						placeholder="Example: I want 14-16 credits, no early mornings, at least one writing-heavy course, and a balanced workload across weekdays."
+						minRows={6}
+						value={form.guidance}
+						onValueChange={(value) => updateForm("guidance", value)}
+					/>
+					<div className="flex flex-wrap items-center gap-3">
+						<Button
+							variant="flat"
+							color="secondary"
+							startContent={<LuSparkles size={16} />}
+							onPress={() => void generateGuidanceDraft()}
+							isLoading={loadingGuidance}
+						isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
+						>
+							Draft with AlfieAI
+						</Button>
+						<p className="text-xs text-default-600 dark:text-default-300">Autofill a high-quality preference paragraph you can edit before generating.</p>
+					</div>
+				</div>
+
+				<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+					<Switch
+						isSelected={form.openSeatsOnly}
+						onValueChange={(value) => updateForm("openSeatsOnly", value)}
+						color="secondary"
+						size="sm"
+					>
+						<div className="text-left">
+							<p className="font-medium text-foreground">Prefer open sections only</p>
+							<p className="text-xs text-default-600 dark:text-default-300">Try to avoid closed/waitlisted sections when possible.</p>
+						</div>
+					</Switch>
+				</div>
+
+				{optionsWarning && (
+					<div className="rounded-2xl border border-warning-200 bg-warning-50/70 px-4 py-3 text-sm text-warning-900 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
+						{optionsWarning}
+					</div>
+				)}
+
+				{error && (
+					<div className="rounded-2xl border border-danger-200 bg-danger-50/80 px-4 py-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-300">
+						{error}
+					</div>
+				)}
+
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+					<Button
+						color="secondary"
+						size="md"
+						onPress={() => void generateSchedule()}
+						isLoading={loadingPlan}
+						isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
+					>
+						Generate schedule
+					</Button>
+				</div>
+			</section>
 
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="center">
 				<ModalContent>
 					{(onClose) => (
 						<>
-							<ModalHeader>Directions to download transcript</ModalHeader>
-							<ModalBody>
-								<ol className="list-decimal pl-5 space-y-2 text-sm text-default-700">
+							<ModalHeader>Download Self-Service Degree Progress</ModalHeader>
+							<ModalBody className="flex flex-col gap-3">
+								<ol className="list-decimal text-sm text-default-700 dark:text-default-200">
 									<li>
 										Log onto self service (
 										<Link href="https://selfservice.juniata.edu" target="_blank" rel="noreferrer">
@@ -651,14 +691,13 @@ export default function ScheduleBuilder() {
 										</Link>
 										).
 									</li>
-									<li>Click on the three-bar menu.</li>
-									<li>Click on Academics.</li>
-									<li>Choose Unofficial Transcript.</li>
-									<li>Click on Degree Audit Transcript.</li>
+									<li>Open the main menu.</li>
+									<li>Go to Academics.</li>
+									<li>Open Degree Progress.</li>
+									<li>Print or save the page as a PDF, then upload that file here.</li>
 								</ol>
-								<p className="text-sm text-default-700">Download should start promptly.</p>
-								<div className="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
-									<strong>Disclaimer:</strong> the transcript copy downloaded from Self Service is unofficial and should not replace the official signed and sealed transcript provided by the registrar.
+								<div className="rounded-xl border border-warning-200 bg-warning-50 text-sm text-warning-900 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
+									<strong>Note:</strong> Degree Progress PDF parsing helps suggestions, but advisor and registrar guidance should still be treated as final.
 								</div>
 							</ModalBody>
 							<ModalFooter>
