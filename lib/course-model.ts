@@ -1,6 +1,6 @@
 //
 // Filename: gemini-model.ts
-// Description: Pass queries to a Gemini 2.5 Flash model running in Google Cloud
+// Description: Pass queries to the configured Gemini Courses model with thinking running in Google Cloud
 // Copyright (c) 2025 Ryan Smith, Adithya Kommi
 //
 
@@ -12,7 +12,7 @@ import {
 import { courseSchema, departmentCodes } from "@/lib/course-schema";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const modelID = "gemini-2.5-flash";
+const modelID = process.env.GEMINI_COURSES_MODEL_ID || process.env.GEMINI_MODEL_ID || "gemini-3-flash-preview";
 
 const context = {
 	text:  `You are AlfieAI - an AI model designed to help students at Juniata College.
@@ -105,6 +105,9 @@ const modelConfig: GenerateContentConfig = {
 	topP: 0.95,
 	seed: 0,
 	responseModalities: ["TEXT"],
+	thinkingConfig: {
+		thinkingBudget: 4096,
+	},
 	tools: [{ googleSearch: {} }],
 
 	safetySettings: [

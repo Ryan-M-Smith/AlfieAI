@@ -13,7 +13,6 @@ import {
 	getBaseRequirementCounts,
 	getFirstYearExperienceWaivers,
 	getPoeWaiverOptions,
-	getStepDownWaivers,
 	inferRequirementCategories,
 	isSwCategory,
 	isWkCategory,
@@ -127,12 +126,9 @@ export interface SchedulePlanningRequest {
 	transcriptText?: string;
 	poe?: string;
 	entryType?: EntryType;
-	incomingCredits?: number;
-	incomingCompositionCredits?: number;
 	targetCredits?: number;
 	studyAbroad?: StudyAbroadStatus;
 	dualDegree?: DualDegreeStatus;
-	legacyBlanketWaiver?: boolean;
 	openSeatsOnly?: boolean;
 	completedCourseCodes?: string[];
 }
@@ -153,6 +149,14 @@ export interface PlannedCourse {
 		waitlisted: number;
 		instructors: string[];
 		meetings: string[];
+		meetingBlocks: Array<{
+			days: WeekdayCode[];
+			startTime: string;
+			endTime: string;
+			location: string;
+			startMinutes: number | null;
+			endMinutes: number | null;
+		}>;
 	};
 }
 
@@ -910,8 +914,6 @@ function buildFixedWaiverCounts(request: SchedulePlanningRequest, intent: Planne
 	const entryType = request.entryType || "continuing";
 	const studyAbroad = request.studyAbroad || "none";
 	const dualDegree = request.dualDegree || "none";
-	const incomingCredits = Math.max(0, Number(request.incomingCredits || 0));
-	const incomingCompositionCredits = Math.max(0, Number(request.incomingCompositionCredits || 0));
 
 	let wkFlexibleWaivers = 0;
 	let swFlexibleWaivers = 0;
@@ -919,22 +921,14 @@ function buildFixedWaiverCounts(request: SchedulePlanningRequest, intent: Planne
 
 	for (const category of getFirstYearExperienceWaivers({
 		entryType,
-		incomingCredits,
-		incomingCompositionCredits,
+		incomingCredits: 0,
+		incomingCompositionCredits: 0,
 	})) {
 		counts[category] += 1;
 	}
 
 	if (counts.fyc > 0 || counts.fys > 0) {
 		summary.push(`First-year experience waivers applied: ${formatCategoryList((["fyc", "fys"] as RequirementCategoryId[]).filter((category) => counts[category] > 0))}.`);
-	}
-
-	const stepDownWaivers = getStepDownWaivers(incomingCredits);
-	wkFlexibleWaivers += stepDownWaivers.wkWaivers;
-	swFlexibleWaivers += stepDownWaivers.swWaivers;
-
-	if (stepDownWaivers.wkWaivers > 0 || stepDownWaivers.swWaivers > 0) {
-		summary.push(`Incoming-credit step-down waivers available: ${stepDownWaivers.wkWaivers} Ways of Knowing and ${stepDownWaivers.swWaivers} Self and the World.`);
 	}
 
 	const poeWaiverOptions = getPoeWaiverOptions(request.poe || "");
@@ -953,12 +947,6 @@ function buildFixedWaiverCounts(request: SchedulePlanningRequest, intent: Planne
 		wkFlexibleWaivers += 1;
 		swFlexibleWaivers += 1;
 		summary.push("Academic-year abroad waivers applied: both Global Engagement courses, one flexible Ways of Knowing waiver, and one flexible Self and the World waiver.");
-	}
-
-	if (request.legacyBlanketWaiver) {
-		wkFlexibleWaivers += 1;
-		counts.global_engagement += 1;
-		summary.push("Legacy blanket waivers applied: one additional flexible Ways of Knowing waiver and one Global Engagement course waiver.");
 	}
 
 	if (dualDegree !== "none") {
@@ -1905,6 +1893,14 @@ function buildPlannedCourses(
 			waitlisted: Number(offering.section.availability?.waitlisted || 0),
 			instructors: (offering.section.instructors || []).map((instructor) => instructor.name).filter(Boolean),
 			meetings: getMeetings(offering.section).map(formatMeeting),
+			meetingBlocks: getMeetings(offering.section).map((meeting) => ({
+				days: getMeetingDays(meeting),
+				startTime: normalizeWhitespace(meeting.start_time),
+				endTime: normalizeWhitespace(meeting.end_time),
+				location: normalizeWhitespace(meeting.classroom),
+				startMinutes: parseTimeToMinutes(meeting.start_time),
+				endMinutes: parseTimeToMinutes(meeting.end_time),
+			})),
 		},
 	}));
 }
@@ -2026,7 +2022,7 @@ export function planOptimalSchedule(
 			alternatives: buildAlternatives(offeringPool.offerings, finalSchedule, requirementState, selectedCoverage),
 			notes: [
 				"Gen-ed matches are inferred from the catalog's course-type tags plus the waiver charts you provided.",
-				"Transfer, AP, and outside coursework can only be recognized from the transcript text or waiver inputs you provide here.",
+				"Transfer, AP, and outside coursework can only be recognized from the Self-Service Degree Progress text or completed-course evidence detected there.",
 				...(poeAfterPlan ? [`POE planning is using ${poeAfterPlan.profile.catalogSource}.`] : request.poe ? [`Detailed catalog-based POE course modeling is not yet available for ${request.poe}, so scheduling is falling back to gen-ed plus department-fit heuristics.`] : []),
 				"Prerequisite checks are heuristic and should still be confirmed against the official registrar or advisor guidance.",
 			],
