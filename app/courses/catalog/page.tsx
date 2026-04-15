@@ -22,7 +22,7 @@ export default function Catalog(): JSX.Element {
 					<span className="flex flex-row justify-center items-center gap-2 sm:gap-3">
 						<span>AlfieAI</span>
 						<GrSchedules size={36}/>
-						<span className="font-chalkboard text-purple-400">Courses</span>
+						<span className="font-chalkboard text-purple-400">Course Catalog</span>
 					</span>
 				</h1>
 			</div>

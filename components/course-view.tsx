@@ -332,7 +332,7 @@ export default function CourseView({ className, course, onGenerateInsights, onDi
 							return (
 								<AccordionItem
 									key={`${course._id}-${section.section_name}-${section.term}-${sectionIndex}`}
-									title={`Section ${sectionNumberInTerm} • ${section.term}`}
+									title={`Section ${section.section_name} • ${section.term}`}
 									subtitle={`${available} seats open / ${capacity} capacity${waitlisted > 0 ? ` • ${waitlisted} waitlisted` : ""}`}
 								>
 									<div className="grid gap-2 text-sm">
