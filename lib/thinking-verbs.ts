@@ -34,8 +34,10 @@ const thinkingVerbs = [
 	"behooving", "cogitating",
 
 	// Luke Becker
-	"ruminating"
-	
+	"ruminating",
+
+    // Adithya Kommi
+    "brainstorming", "braining", "1000 IQ", 
 ] as const;
 
 export default thinkingVerbs;

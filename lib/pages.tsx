@@ -11,6 +11,7 @@ import { IoChatboxEllipses } from "react-icons/io5";
 import { MdOutlineContactSupport } from "react-icons/md";
 import { PiGavelFill } from "react-icons/pi";
 import { ReactNode } from "react";
+import { RiSparkling2Fill } from "react-icons/ri";
 import { TbTimelineEventText } from "react-icons/tb";
 
 export interface Page {
@@ -101,6 +102,21 @@ export const pages: PageLayout = {
 	},
 
 	info: {
+		about: {
+			href: "/about",
+			name: "about",
+			description: "Learn about AlfieAI's mission, features, and roadmap",
+			card: (
+				<span className="flex flex-row justify-start items-center gap-1 text-2xl font-medium tracking-tight">
+					AlfieAI
+					<RiSparkling2Fill size={15}/>
+					<span className="text-cyan-500 dark:text-cyan-300 font-semibold font-sans">
+						About
+					</span>
+				</span>
+			)
+		},
+
 		policies: {
 			href: "/policies",
 			name: "policies",
