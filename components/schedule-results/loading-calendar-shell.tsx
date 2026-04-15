@@ -20,15 +20,15 @@ export default function LoadingCalendarShell({ onBack }: LoadingCalendarShellPro
 			<div className="mt-6 rounded-3xl border border-default-200/70 bg-default-50/65 px-6 py-12 text-center dark:border-default-700 dark:bg-zinc-950/65 sm:px-10 sm:py-16">
 				<div className="flex flex-col items-center">
 					<div className="alfie-thinking-spinner" aria-hidden />
-					<p className="mt-5 text-sm font-semibold uppercase tracking-[0.32em] text-default-500 dark:text-default-400">Generating your perfect schedule </p>
+					<p className="mt-5 text-sm font-semibold uppercase tracking-[0.32em] text-default-500">Generating your perfect schedule </p>
 					<ThinkingStatus className="mt-4 justify-center gap-0 text-3xl sm:text-4xl md:text-[2.85rem]" />
-					<p className="mt-4 max-w-xl text-base leading-relaxed text-default-500 dark:text-default-400 sm:text-lg">
+					<p className="mt-4 max-w-xl text-base leading-relaxed text-default-500 sm:text-lg">
 						Syncing your term offerings, transcript evidence, and POE preferences into one schedule that actually works.
 					</p>
 					<div className="mt-7 flex flex-wrap justify-center gap-3">
-						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-600 shadow-sm dark:border-default-700 dark:bg-zinc-900/75 dark:text-default-300">Checking section availability</div>
-						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-600 shadow-sm dark:border-default-700 dark:bg-zinc-900/75 dark:text-default-300">Balancing requirement fit</div>
-						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-600 shadow-sm dark:border-default-700 dark:bg-zinc-900/75 dark:text-default-300">Resolving time conflicts</div>
+						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-500 shadow-sm dark:border-default-700 dark:bg-zinc-900/75">Checking section availability</div>
+						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-500 shadow-sm dark:border-default-700 dark:bg-zinc-900/75">Balancing requirement fit</div>
+						<div className="rounded-full border border-default-200/80 bg-content1/85 px-4 py-2 text-sm font-medium text-default-500 shadow-sm dark:border-default-700 dark:bg-zinc-900/75">Resolving time conflicts</div>
 					</div>
 				</div>
 			</div>
