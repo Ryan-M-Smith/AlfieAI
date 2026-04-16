@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import clientPromise from "@/lib/mongodb";
 import { Course } from "@/lib/models/course";
-import {
+import type {
+	CreditLoadProfile,
+	ScheduleCreditPreference,
 	ScheduleCourseResult,
 	ScheduleGenerationResult,
 	ScheduleMeetingBlock,
@@ -21,14 +23,7 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const transcriptParseTimeoutMs = Number(process.env.TRANSCRIPT_PARSE_TIMEOUT_MS || 25000);
 const maxDegreeProgressPdfBytes = Number(process.env.MAX_DEGREE_PROGRESS_PDF_BYTES || 8 * 1024 * 1024);
 
-const candidateModelIDs = [
-	process.env.GEMINI_SCHEDULER_MODEL_ID,
-	process.env.GEMINI_COURSES_MODEL_ID,
-	process.env.GEMINI_MODEL_ID,
-	"gemini-3-flash-preview",
-	"gemini-2.5-flash",
-	"gemini-2.5-pro",
-].filter((modelID, index, allModelIDs): modelID is string => Boolean(modelID) && allModelIDs.indexOf(modelID) === index);
+const candidateModelIDs = ["gemini-3-flash-preview"];
 
 const courseProjection = {
 	_id: 1,
@@ -44,8 +39,41 @@ const courseProjection = {
 interface TranscriptEvidence {
 	transcriptDetected: boolean;
 	completedCourseCodes: string[];
+	plannedCourseCodes: string[];
+	transferCourseCodes: string[];
+	excludedCourseCodes: string[];
 	requirementMentions: string[];
+	completedRequirementMentions: string[];
 	transferMentions: string[];
+	completedByTerm: Array<{
+		term: string;
+		count: number;
+	}>;
+}
+
+interface ParsedTranscriptRecords {
+	completed: Array<{
+		term: string;
+		courseCode: string;
+		title: string;
+		credits: string;
+		grade: string;
+	}>;
+	planned: Array<{
+		term: string;
+		courseCode: string;
+		title: string;
+	}>;
+	transfer: Array<{
+		term: string;
+		courseCode: string;
+		title: string;
+		credits: string;
+	}>;
+	requirements: Array<{
+		label: string;
+		status: "completed" | "pending" | "in-progress" | "unknown";
+	}>;
 }
 
 interface ModelScheduleOutput {
@@ -53,6 +81,367 @@ interface ModelScheduleOutput {
 		courses: ScheduleModelCourseSelection[];
 		reasoning: string;
 	};
+}
+
+const CREDIT_LOAD_LABELS: Record<CreditLoadProfile, string> = {
+	"part-time": "Part-time (<12 credits)",
+	light: "Light (12-13 credits)",
+	moderate: "Moderate (14-17 credits)",
+	heavy: "Heavy (18+ credits)",
+	custom: "Custom",
+};
+
+function parseOptionalNumber(value: string): number | null {
+	if (!value.trim()) {
+		return null;
+	}
+
+	const parsed = Number(value);
+	if (!Number.isFinite(parsed)) {
+		return null;
+	}
+
+	return parsed;
+}
+
+function clampCredits(value: number): number {
+	return Math.min(24, Math.max(1, Math.round(value)));
+}
+
+function resolveCreditPreference(formData: FormData): ScheduleCreditPreference {
+	const rawProfile = getString(formData, "creditLoadProfile").toLowerCase();
+	const profile: CreditLoadProfile = rawProfile === "part-time"
+		|| rawProfile === "light"
+		|| rawProfile === "moderate"
+		|| rawProfile === "heavy"
+		|| rawProfile === "custom"
+		? rawProfile
+		: "moderate";
+
+	if (profile === "part-time") {
+		return {
+			profile,
+			label: CREDIT_LOAD_LABELS[profile],
+			minCredits: 1,
+			maxCredits: 11,
+			targetCredits: 10,
+		};
+	}
+
+	if (profile === "light") {
+		return {
+			profile,
+			label: CREDIT_LOAD_LABELS[profile],
+			minCredits: 12,
+			maxCredits: 13,
+			targetCredits: 12,
+		};
+	}
+
+	if (profile === "heavy") {
+		return {
+			profile,
+			label: CREDIT_LOAD_LABELS[profile],
+			minCredits: 18,
+			maxCredits: null,
+			targetCredits: 18,
+		};
+	}
+
+	if (profile === "custom") {
+		const requested = parseOptionalNumber(getString(formData, "targetCredits"));
+		const customTarget = clampCredits(requested ?? 15);
+		return {
+			profile,
+			label: `${CREDIT_LOAD_LABELS[profile]} (${customTarget} credits)`,
+			minCredits: customTarget,
+			maxCredits: customTarget,
+			targetCredits: customTarget,
+		};
+	}
+
+	return {
+		profile: "moderate",
+		label: CREDIT_LOAD_LABELS.moderate,
+		minCredits: 14,
+		maxCredits: 17,
+		targetCredits: 15,
+	};
+}
+
+function getPrimaryCredits(courses: ScheduleCourseResult[]): number {
+	return courses
+		.filter((course) => course.primary)
+		.reduce((sum, course) => sum + Number(course.credits || 0), 0);
+}
+
+function getRangeDistance(total: number, minCredits: number, maxCredits: number): number {
+	if (total < minCredits) {
+		return minCredits - total;
+	}
+	if (total > maxCredits) {
+		return total - maxCredits;
+	}
+	return 0;
+}
+
+function greedyAdjustCreditPreference(
+	allSelectedCourses: ScheduleCourseResult[],
+	creditPreference: ScheduleCreditPreference,
+): string[] {
+	const notes: string[] = [];
+	const minCredits = creditPreference.minCredits ?? 0;
+	const maxCredits = creditPreference.maxCredits ?? Number.POSITIVE_INFINITY;
+	const targetCredits = creditPreference.targetCredits ?? minCredits;
+
+	const refreshLists = () => ({
+		primary: allSelectedCourses.filter((course) => course.primary),
+		backup: allSelectedCourses.filter((course) => !course.primary),
+	});
+
+	let { primary } = refreshLists();
+	let totalCredits = getPrimaryCredits(allSelectedCourses);
+
+	while (totalCredits > maxCredits && primary.length > 1) {
+		const sortedPrimary = [...primary].sort((left, right) => Number(right.credits || 0) - Number(left.credits || 0));
+		const demotionCandidate = sortedPrimary.find((course) => {
+			const nextCredits = totalCredits - Number(course.credits || 0);
+			return nextCredits >= minCredits || primary.length > 1;
+		});
+
+		if (!demotionCandidate) {
+			break;
+		}
+
+		demotionCandidate.primary = false;
+		notes.push(`${demotionCandidate.courseCode} moved to backup to respect your requested credit load.`);
+		({ primary } = refreshLists());
+		totalCredits = getPrimaryCredits(allSelectedCourses);
+	}
+
+	while (totalCredits < minCredits) {
+		const { backup } = refreshLists();
+		const viableBackups = backup.filter((candidate) => !primary.some((course) => scheduleCoursesMeetingConflict(course, candidate)));
+		if (viableBackups.length === 0) {
+			break;
+		}
+
+		const scored = [...viableBackups].sort((left, right) => {
+			const leftDistance = Math.abs((totalCredits + Number(left.credits || 0)) - targetCredits);
+			const rightDistance = Math.abs((totalCredits + Number(right.credits || 0)) - targetCredits);
+			if (leftDistance !== rightDistance) {
+				return leftDistance - rightDistance;
+			}
+
+			const seatDiff = Number(right.section.openSeats || 0) - Number(left.section.openSeats || 0);
+			if (seatDiff !== 0) {
+				return seatDiff;
+			}
+
+			return normalizeCourseCode(left.courseCode).localeCompare(normalizeCourseCode(right.courseCode));
+		});
+
+		const promotionCandidate = scored[0];
+		promotionCandidate.primary = true;
+		notes.push(`${promotionCandidate.courseCode} promoted from backup to better match your requested credit load.`);
+		({ primary } = refreshLists());
+		totalCredits = getPrimaryCredits(allSelectedCourses);
+	}
+
+	if (totalCredits < minCredits) {
+		notes.push(`Primary schedule reached ${totalCredits} credits, below your requested minimum of ${minCredits}.`);
+	}
+	if (totalCredits > maxCredits) {
+		notes.push(`Primary schedule remained at ${totalCredits} credits, above your requested maximum of ${maxCredits}.`);
+	}
+
+	return notes;
+}
+
+function applyCreditPreferenceToSelection(
+	allSelectedCourses: ScheduleCourseResult[],
+	creditPreference: ScheduleCreditPreference,
+): string[] {
+	if (allSelectedCourses.length === 0) {
+		return [];
+	}
+
+	// Safety valve: for very large candidate sets, keep the previous greedy behavior.
+	if (allSelectedCourses.length > 18) {
+		return greedyAdjustCreditPreference(allSelectedCourses, creditPreference);
+	}
+
+	const notes: string[] = [];
+	const minCredits = creditPreference.minCredits ?? 0;
+	const maxCredits = creditPreference.maxCredits ?? Number.POSITIVE_INFINITY;
+	const initialPrimaryKeys = new Set(
+		allSelectedCourses
+			.filter((course) => course.primary)
+			.map((course) => `${normalizeCourseCode(course.courseCode)}::${course.section.sectionName}`)
+	);
+	const originalTotalCredits = getPrimaryCredits(allSelectedCourses);
+	const targetCredits = creditPreference.targetCredits ?? (
+		Number.isFinite(minCredits) && Number.isFinite(maxCredits)
+			? (minCredits + maxCredits) / 2
+			: Number.isFinite(minCredits)
+				? minCredits
+				: Number.isFinite(maxCredits)
+					? maxCredits
+					: originalTotalCredits
+	);
+
+	const courseCount = allSelectedCourses.length;
+	const conflictMatrix: boolean[][] = Array.from({ length: courseCount }, () => Array(courseCount).fill(false));
+	for (let i = 0; i < courseCount; i += 1) {
+		for (let j = i + 1; j < courseCount; j += 1) {
+			const conflicts = scheduleCoursesMeetingConflict(allSelectedCourses[i], allSelectedCourses[j]);
+			conflictMatrix[i][j] = conflicts;
+			conflictMatrix[j][i] = conflicts;
+		}
+	}
+
+	type CandidateState = {
+		indices: number[];
+		totalCredits: number;
+		targetDistance: number;
+		rangeDistance: number;
+		preservedPrimaryCount: number;
+		openSeatTotal: number;
+		courseCount: number;
+	};
+
+	const compareCandidates = (left: CandidateState, right: CandidateState): number => {
+		if (left.rangeDistance !== right.rangeDistance) {
+			return left.rangeDistance < right.rangeDistance ? 1 : -1;
+		}
+		if (left.targetDistance !== right.targetDistance) {
+			return left.targetDistance < right.targetDistance ? 1 : -1;
+		}
+		if (left.preservedPrimaryCount !== right.preservedPrimaryCount) {
+			return left.preservedPrimaryCount > right.preservedPrimaryCount ? 1 : -1;
+		}
+		if (left.openSeatTotal !== right.openSeatTotal) {
+			return left.openSeatTotal > right.openSeatTotal ? 1 : -1;
+		}
+		if (left.courseCount !== right.courseCount) {
+			return left.courseCount > right.courseCount ? 1 : -1;
+		}
+		return 0;
+	};
+
+	let bestInRange: CandidateState | null = null;
+	let bestOutOfRange: CandidateState | null = null;
+
+	const chosen: number[] = [];
+
+	const evaluateCurrent = (totalCreditsValue: number, preservedPrimaryCount: number, openSeatTotal: number): void => {
+		if (chosen.length === 0) {
+			return;
+		}
+
+		const rangeDistance = getRangeDistance(totalCreditsValue, minCredits, maxCredits);
+		const candidate: CandidateState = {
+			indices: [...chosen],
+			totalCredits: totalCreditsValue,
+			targetDistance: Math.abs(totalCreditsValue - targetCredits),
+			rangeDistance,
+			preservedPrimaryCount,
+			openSeatTotal,
+			courseCount: chosen.length,
+		};
+
+		if (rangeDistance === 0) {
+			if (!bestInRange || compareCandidates(candidate, bestInRange) > 0) {
+				bestInRange = candidate;
+			}
+			return;
+		}
+
+		if (!bestOutOfRange || compareCandidates(candidate, bestOutOfRange) > 0) {
+			bestOutOfRange = candidate;
+		}
+	};
+
+	const search = (index: number, totalCreditsValue: number, preservedPrimaryCount: number, openSeatTotal: number): void => {
+		evaluateCurrent(totalCreditsValue, preservedPrimaryCount, openSeatTotal);
+
+		if (index >= courseCount) {
+			return;
+		}
+
+		search(index + 1, totalCreditsValue, preservedPrimaryCount, openSeatTotal);
+
+		const conflicts = chosen.some((selectedIndex) => conflictMatrix[index][selectedIndex]);
+		if (conflicts) {
+			return;
+		}
+
+		const course = allSelectedCourses[index];
+		const key = `${normalizeCourseCode(course.courseCode)}::${course.section.sectionName}`;
+		chosen.push(index);
+		search(
+			index + 1,
+			totalCreditsValue + Number(course.credits || 0),
+			preservedPrimaryCount + (initialPrimaryKeys.has(key) ? 1 : 0),
+			openSeatTotal + Number(course.section.openSeats || 0),
+		);
+		chosen.pop();
+	};
+
+	search(0, 0, 0, 0);
+
+	let bestCandidate: CandidateState;
+	if (bestInRange) {
+		bestCandidate = bestInRange;
+	} else if (bestOutOfRange) {
+		bestCandidate = bestOutOfRange;
+	} else {
+		return notes;
+	}
+
+	const selectedIndices = new Set(bestCandidate.indices);
+	for (let index = 0; index < allSelectedCourses.length; index += 1) {
+		allSelectedCourses[index].primary = selectedIndices.has(index);
+	}
+
+	const currentPrimaryKeys = new Set(
+		allSelectedCourses
+			.filter((course) => course.primary)
+			.map((course) => `${normalizeCourseCode(course.courseCode)}::${course.section.sectionName}`)
+	);
+	const promoted = allSelectedCourses
+		.filter((course) => {
+			const key = `${normalizeCourseCode(course.courseCode)}::${course.section.sectionName}`;
+			return currentPrimaryKeys.has(key) && !initialPrimaryKeys.has(key);
+		})
+		.map((course) => course.courseCode);
+	const demoted = allSelectedCourses
+		.filter((course) => {
+			const key = `${normalizeCourseCode(course.courseCode)}::${course.section.sectionName}`;
+			return initialPrimaryKeys.has(key) && !currentPrimaryKeys.has(key);
+		})
+		.map((course) => course.courseCode);
+
+	if (promoted.length > 0 || demoted.length > 0) {
+		notes.push(
+			`Credit optimization adjusted primary placements to better match your requested load (${originalTotalCredits} -> ${bestCandidate.totalCredits} credits).`
+		);
+	}
+	if (promoted.length > 0) {
+		notes.push(`${Array.from(new Set(promoted)).join(", ")} promoted from backup to improve credit fit.`);
+	}
+	if (demoted.length > 0) {
+		notes.push(`${Array.from(new Set(demoted)).join(", ")} moved to backup to improve credit fit.`);
+	}
+
+	if (bestCandidate.totalCredits < minCredits) {
+		notes.push(`Primary schedule reached ${bestCandidate.totalCredits} credits, below your requested minimum of ${minCredits}.`);
+	}
+	if (bestCandidate.totalCredits > maxCredits) {
+		notes.push(`Primary schedule remained at ${bestCandidate.totalCredits} credits, above your requested maximum of ${maxCredits}.`);
+	}
+
+	return notes;
 }
 
 interface ProfessorNameRecord {
@@ -95,11 +484,55 @@ function parseJsonStringArray(value: string): string[] {
 }
 
 function normalizeCourseCode(code: string): string {
-	return code.trim().toUpperCase();
+	const normalized = code.trim().toUpperCase().replace(/\s+/g, "");
+	const match = normalized.match(/^([A-Z]{2,4})-?(\d{3})([A-Z]{0,3})$/);
+	if (!match) {
+		return normalized;
+	}
+
+	const prefix = match[1];
+	const number = match[2];
+	const suffix = match[3] || "";
+	return `${prefix}-${number}${suffix}`;
+}
+
+function toBaseCourseCode(code: string): string {
+	const normalized = normalizeCourseCode(code);
+	const match = normalized.match(/^([A-Z]{2,4})-(\d{3})[A-Z]{1,3}$/);
+	if (!match) {
+		return normalized;
+	}
+
+	return `${match[1]}-${match[2]}`;
+}
+
+function getCourseCodeAliases(code: string): string[] {
+	const normalized = normalizeCourseCode(code);
+	const base = toBaseCourseCode(normalized);
+	return Array.from(new Set([normalized, base].filter(Boolean)));
 }
 
 function normalizeWhitespace(value: string): string {
 	return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeRequirementStatus(value: string): "completed" | "pending" | "in-progress" | "unknown" {
+	const normalized = normalizeWhitespace(value).toLowerCase();
+	if (!normalized) {
+		return "unknown";
+	}
+
+	if (/(?:complete(?:d)?|fulfilled|satisfied|met|waived|[✓✔☑])/.test(normalized)) {
+		return "completed";
+	}
+	if (/(?:in[-\s]?progress|ip\b)/.test(normalized)) {
+		return "in-progress";
+	}
+	if (/(?:pending|remaining|incomplete|not\s+met)/.test(normalized)) {
+		return "pending";
+	}
+
+	return "unknown";
 }
 
 function normalizeNameToken(value: string): string {
@@ -405,40 +838,133 @@ function normalizeSelection(courses: ScheduleModelCourseSelection[]): ScheduleMo
 	return Array.from(merged.values());
 }
 
+function parseStructuredTranscriptRecords(transcriptText: string): ParsedTranscriptRecords {
+	const parsed: ParsedTranscriptRecords = {
+		completed: [],
+		planned: [],
+		transfer: [],
+		requirements: [],
+	};
+
+	for (const line of transcriptText.split(/\r?\n+/)) {
+		const parts = line.split("|").map((part) => part.trim());
+		const kind = (parts[0] || "").toUpperCase();
+
+		if (kind === "COMPLETED") {
+			parsed.completed.push({
+				term: parts[1] || "Unknown Term",
+				courseCode: normalizeCourseCode(parts[2] || ""),
+				title: parts[3] || "",
+				credits: parts[4] || "",
+				grade: parts[5] || "",
+			});
+			continue;
+		}
+
+		if (kind === "PLANNED") {
+			parsed.planned.push({
+				term: parts[1] || "Unknown Term",
+				courseCode: normalizeCourseCode(parts[2] || ""),
+				title: parts[3] || "",
+			});
+			continue;
+		}
+
+		if (kind === "TRANSFER") {
+			parsed.transfer.push({
+				term: parts[1] || "Unknown Term",
+				courseCode: normalizeCourseCode(parts[2] || ""),
+				title: parts[3] || "",
+				credits: parts[4] || "",
+			});
+			continue;
+		}
+
+		if (kind === "REQUIREMENT" && parts[1]) {
+			parsed.requirements.push({
+				label: parts[1],
+				status: normalizeRequirementStatus(parts[2] || ""),
+			});
+		}
+	}
+
+	return parsed;
+}
+
 function collectTranscriptEvidence(transcriptText: string): TranscriptEvidence {
 	if (!transcriptText.trim()) {
 		return {
 			transcriptDetected: false,
 			completedCourseCodes: [],
+			plannedCourseCodes: [],
+			transferCourseCodes: [],
+			excludedCourseCodes: [],
 			requirementMentions: [],
+			completedRequirementMentions: [],
 			transferMentions: [],
+			completedByTerm: [],
 		};
 	}
 
+	const records = parseStructuredTranscriptRecords(transcriptText);
 	const completed = new Set<string>();
+	const planned = new Set<string>();
+	const transferCourseCodes = new Set<string>();
 	const requirements = new Set<string>();
+	const completedRequirements = new Set<string>();
 	const transfers = new Set<string>();
+	const completedByTermCounter = new Map<string, number>();
 
-	for (const line of transcriptText.split(/\r?\n/)) {
-		const parts = line.split("|").map((part) => part.trim());
-		const kind = (parts[0] || "").toUpperCase();
+	for (const item of records.completed) {
+		if (!item.courseCode) {
+			continue;
+		}
 
-		if (kind === "COMPLETED" && parts[2]) {
-			completed.add(normalizeCourseCode(parts[2]));
-		}
-		if (kind === "REQUIREMENT" && parts[1]) {
-			requirements.add(parts[1]);
-		}
-		if (kind === "TRANSFER" && parts[2]) {
-			transfers.add(parts[2]);
+		completed.add(item.courseCode);
+		const term = item.term || "Unknown Term";
+		completedByTermCounter.set(term, Number(completedByTermCounter.get(term) || 0) + 1);
+	}
+
+	for (const item of records.transfer) {
+		if (item.courseCode) {
+			transferCourseCodes.add(item.courseCode);
+			transfers.add(item.courseCode);
 		}
 	}
+
+	for (const item of records.planned) {
+		if (item.courseCode) {
+			planned.add(item.courseCode);
+		}
+	}
+
+	for (const requirement of records.requirements) {
+		requirements.add(requirement.label);
+		if (requirement.status === "completed") {
+			completedRequirements.add(requirement.label);
+		}
+	}
+
+	const excludedCourseCodes = Array.from(new Set([
+		...completed,
+		...planned,
+		...transferCourseCodes,
+	]));
+
+	const completedByTerm = Array.from(completedByTermCounter.entries())
+		.map(([term, count]) => ({ term, count }))
+		.sort((left, right) => left.term.localeCompare(right.term));
 
 	return {
 		transcriptDetected: true,
 		completedCourseCodes: Array.from(completed),
+		plannedCourseCodes: Array.from(planned),
+		transferCourseCodes: Array.from(transferCourseCodes),
+		excludedCourseCodes,
 		requirementMentions: Array.from(requirements),
+		completedRequirementMentions: Array.from(completedRequirements),
 		transferMentions: Array.from(transfers),
+		completedByTerm,
 	};
 }
 
@@ -515,6 +1041,7 @@ async function generateModelSchedule(payload: {
 	term: string;
 	primaryPoes: string[];
 	secondaryEmphases: string[];
+	creditPreference: ScheduleCreditPreference;
 	guidance: string;
 	transcriptEvidence: TranscriptEvidence;
 	availableCourses: ReturnType<typeof buildPromptCourses>;
@@ -547,21 +1074,39 @@ async function generateModelSchedule(payload: {
 		},
 	};
 
-	const plannerPrompt = [
+	const creditPreference = payload.creditPreference;
+	const targetCreditsText = creditPreference.targetCredits === null
+		? "not specified"
+		: String(creditPreference.targetCredits);
+	const creditRangeText = creditPreference.minCredits !== null && creditPreference.maxCredits !== null
+		? `${creditPreference.minCredits}-${creditPreference.maxCredits}`
+		: creditPreference.minCredits !== null
+			? `${creditPreference.minCredits}+`
+			: creditPreference.maxCredits !== null
+				? `<=${creditPreference.maxCredits}`
+				: "open";
+
+	const schedulerPrompt = [
 		"You are AlfieAI Courses.",
 		"Build one term schedule recommendations using only the available course catalog data provided.",
 		"Return ONLY valid JSON that matches the required schema.",
 		"Do not include markdown, prose outside JSON, or extra keys.",
+		`Student-selected credit profile: ${creditPreference.profile} (${creditPreference.label}).`,
+		`Required credit range for primary schedule: ${creditRangeText}.`,
+		`Target credits for primary schedule: ${targetCreditsText}.`,
 		"Rules:",
 		"1) Include both primary and backup courses in results.courses.",
 		"2) Use primary=true for recommended first-choice schedule courses.",
 		"3) Use primary=false for backup or nice-to-have options.",
 		"4) Use only course codes present in availableCourses.",
-		"5) NEVER include any course whose course_code appears in transcriptEvidence.completedCourseCodes — those courses have already been completed by the student.",
+		"5) NEVER include any course whose course_code appears in transcriptEvidence.excludedCourseCodes. This includes completed, planned/in-progress, and transfer-equivalent courses.",
 		"6) Choose primary courses so that no two of them share a day with overlapping start/end times — time conflicts are not allowed in the primary schedule.",
 		"7) Aim for coherent schedule fit using term, primary POEs, secondary emphases, transcript evidence, and user guidance.",
-		"8) results.reasoning should explain how the choices satisfy the student's goals and constraints.",
+		"8) Treat the student-selected credit profile, range, and target as required constraints; only deviate if impossible with the provided catalog and explain why.",
+		"9) When transcriptEvidence.completedRequirementMentions includes requirement categories, de-prioritize courses whose course_types appear to map to those already-completed categories.",
+		"10) results.reasoning should explain how the choices satisfy the student's goals and constraints.",
 		"Input payload follows as JSON:",
+		"11) If someone has taken a Connections course (CONN-XXX) either in progress or completed previously, do not recommend Connections courses at all.",
 		JSON.stringify(payload),
 	].join("\n");
 
@@ -570,7 +1115,7 @@ async function generateModelSchedule(payload: {
 		try {
 			const response = await genAI.models.generateContent({
 				model: modelID,
-				contents: plannerPrompt,
+				contents: schedulerPrompt,
 				config: {
 					responseMimeType: "application/json",
 					responseJsonSchema: outputSchema,
@@ -703,6 +1248,7 @@ export async function POST(request: NextRequest) {
 		const guidance = getString(formData, "guidance");
 		const secondaryEmphases = parseJsonStringArray(getString(formData, "secondaryEmphases"));
 		const preferOpenSections = getString(formData, "openSeatsOnly") === "true";
+		const creditPreference = resolveCreditPreference(formData);
 
 		if (!term) {
 			return NextResponse.json({ error: "A term is required to generate a schedule." }, { status: 400 });
@@ -799,23 +1345,45 @@ export async function POST(request: NextRequest) {
 		const availableCoursesWithResolvedInstructors = resolveCourseInstructorNames(availableCourses, instructorLookup);
 
 		const transcriptEvidence = collectTranscriptEvidence(transcriptText);
+		const completedAliases = new Set(transcriptEvidence.completedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
+		const plannedAliases = new Set(transcriptEvidence.plannedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
+		const transferAliases = new Set(transcriptEvidence.transferCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
+		const excludedAliases = new Set(transcriptEvidence.excludedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
+		const transcriptEvidenceForModel: TranscriptEvidence = {
+			...transcriptEvidence,
+			completedCourseCodes: Array.from(completedAliases),
+			plannedCourseCodes: Array.from(plannedAliases),
+			transferCourseCodes: Array.from(transferAliases),
+			excludedCourseCodes: Array.from(excludedAliases),
+			transferMentions: Array.from(transferAliases),
+		};
 
 		if (availableCoursesWithResolvedInstructors.length === 0) {
 			return NextResponse.json({ error: `No course offerings were found for ${term}.` }, { status: 404 });
 		}
 
-		// Remove courses the student already completed from the catalog sent to the model
-		const completedSet = new Set(transcriptEvidence.completedCourseCodes.map(normalizeCourseCode));
-		const filteredCourses = completedSet.size > 0
-			? availableCoursesWithResolvedInstructors.filter((c) => !completedSet.has(normalizeCourseCode(c.course_code)))
+		// Remove completed/planned/transfer-equivalent courses from the catalog sent to the model
+		const filteredCourses = excludedAliases.size > 0
+			? availableCoursesWithResolvedInstructors.filter((c) => {
+				const aliases = getCourseCodeAliases(c.course_code);
+				return !aliases.some((alias) => excludedAliases.has(alias));
+			})
 			: availableCoursesWithResolvedInstructors;
+
+		if (filteredCourses.length === 0) {
+			return NextResponse.json(
+				{ error: "All available courses for this term appear to already be completed, planned, or transfer-equivalent based on your transcript." },
+				{ status: 422 },
+			);
+		}
 
 		const modelOutput = await generateModelSchedule({
 			term,
 			primaryPoes,
 			secondaryEmphases,
+			creditPreference,
 			guidance: guidance || "No explicit student guidance provided.",
-			transcriptEvidence,
+			transcriptEvidence: transcriptEvidenceForModel,
 			availableCourses: buildPromptCourses(filteredCourses),
 		});
 
@@ -904,13 +1472,26 @@ export async function POST(request: NextRequest) {
 		}
 		primaryCourses = confirmedPrimary;
 
+		const creditAdjustmentNotes = applyCreditPreferenceToSelection(allSelectedCourses, creditPreference);
+		warnings.push(...creditAdjustmentNotes);
+		primaryCourses = allSelectedCourses.filter((course) => course.primary);
+
 		const backupCourses = allSelectedCourses.filter((course) => !course.primary);
+		const finalPrimaryCredits = primaryCourses.reduce((sum, course) => sum + Number(course.credits || 0), 0);
+		const creditRangeText = creditPreference.minCredits !== null && creditPreference.maxCredits !== null
+			? `${creditPreference.minCredits}-${creditPreference.maxCredits}`
+			: creditPreference.minCredits !== null
+				? `${creditPreference.minCredits}+`
+				: creditPreference.maxCredits !== null
+					? `<=${creditPreference.maxCredits}`
+					: "open";
 		const notes = [
 			`Term catalog grounding used ${availableCoursesWithResolvedInstructors.length} available course records for ${term}.`,
 			`Primary POEs used for planning: ${primaryPoes.join(", ")}.`,
+			`Credit load preference: ${creditPreference.label} (target range ${creditRangeText}, planned primary total ${finalPrimaryCredits}).`,
 			`AlfieAI selected ${allSelectedCourses.length} matched courses (${primaryCourses.length} primary, ${backupCourses.length} backup).`,
 			transcriptEvidence.transcriptDetected
-				? `Degree-progress evidence recognized ${transcriptEvidence.completedCourseCodes.length} completed courses and ${transcriptEvidence.requirementMentions.length} requirement markers.`
+				? `Degree-progress evidence recognized ${transcriptEvidence.completedCourseCodes.length} completed, ${transcriptEvidence.plannedCourseCodes.length} planned, and ${transcriptEvidence.transferCourseCodes.length} transfer-equivalent courses; ${transcriptEvidence.completedRequirementMentions.length} completed requirement categories were also deprioritized.`
 				: "No parsed degree-progress evidence was available for this run.",
 		];
 
@@ -919,6 +1500,7 @@ export async function POST(request: NextRequest) {
 			poe,
 			primaryPoes,
 			secondaryEmphases,
+			creditPreference,
 			guidance,
 			reasoning: modelOutput.results.reasoning,
 			primaryCourses,
@@ -929,6 +1511,7 @@ export async function POST(request: NextRequest) {
 				completedCourseCodes: transcriptEvidence.completedCourseCodes,
 				requirementMentions: transcriptEvidence.requirementMentions,
 				transferMentions: transcriptEvidence.transferMentions,
+				completedByTerm: transcriptEvidence.completedByTerm,
 			} satisfies ScheduleRequirementsProgress,
 			notes,
 			warnings,

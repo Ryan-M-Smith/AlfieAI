@@ -21,7 +21,7 @@ export default function ProfessorsPage(): JSX.Element {
 				</h1>
 			</div>
 
-			<ProfessorsView />
+			<ProfessorsView/>
 		</div>
 	);
 }

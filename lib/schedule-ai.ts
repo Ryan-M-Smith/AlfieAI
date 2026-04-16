@@ -37,6 +37,10 @@ export interface ScheduleRequirementsProgress {
 	completedCourseCodes: string[];
 	requirementMentions: string[];
 	transferMentions: string[];
+	completedByTerm?: Array<{
+		term: string;
+		count: number;
+	}>;
 }
 
 export interface ScheduleModelCourseSelection {
@@ -44,11 +48,22 @@ export interface ScheduleModelCourseSelection {
 	primary: boolean;
 }
 
+export type CreditLoadProfile = "part-time" | "light" | "moderate" | "heavy" | "custom";
+
+export interface ScheduleCreditPreference {
+	profile: CreditLoadProfile;
+	label: string;
+	minCredits: number | null;
+	maxCredits: number | null;
+	targetCredits: number | null;
+}
+
 export interface ScheduleGenerationResult {
 	term: string;
 	poe: string;
 	primaryPoes: string[];
 	secondaryEmphases: string[];
+	creditPreference: ScheduleCreditPreference;
 	guidance: string;
 	reasoning: string;
 	primaryCourses: ScheduleCourseResult[];

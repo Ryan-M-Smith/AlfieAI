@@ -12,7 +12,7 @@ import {
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const modelID = process.env.GEMINI_EVENTS_MODEL_ID || process.env.GEMINI_MODEL_ID || "gemini-3-flash-preview";
+const modelID = "gemini-3-flash-preview";
 const enableGoogleSearch = true;
 
 const context = {

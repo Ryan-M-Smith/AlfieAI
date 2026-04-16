@@ -412,6 +412,21 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 
 		return result?.poe || "";
 	}, [primaryPoeValues, result?.poe]);
+	const creditPreferenceText = useMemo(() => {
+		if (!result) {
+			return "";
+		}
+
+		const preference = result.creditPreference;
+		if (preference.maxCredits === null && preference.minCredits !== null) {
+			return `${preference.label} (at least ${preference.minCredits} credits)`;
+		}
+		if (preference.minCredits !== null && preference.maxCredits !== null) {
+			return `${preference.label} (${preference.minCredits}-${preference.maxCredits} credits)`;
+		}
+
+		return preference.label;
+	}, [result]);
 	const completedEvidence = useMemo(
 		() => [...new Set(result?.requirementsProgress.completedCourseCodes || [])].sort((left, right) => left.localeCompare(right)),
 		[result?.requirementsProgress.completedCourseCodes]
@@ -433,22 +448,22 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 			{
 				label: "Scheduled",
 				value: primaryCourses.length,
-				className: "border-cyan-400/35 bg-cyan-500/12 text-cyan-100",
+				className: "border-cyan-300/70 bg-cyan-100/90 text-cyan-800 dark:border-cyan-400/35 dark:bg-cyan-500/12 dark:text-cyan-100",
 			},
 			{
 				label: "Credits",
 				value: totalCredits,
-				className: "border-emerald-400/35 bg-emerald-500/12 text-emerald-100",
+				className: "border-emerald-300/70 bg-emerald-100/90 text-emerald-800 dark:border-emerald-400/35 dark:bg-emerald-500/12 dark:text-emerald-100",
 			},
 			{
 				label: "POE/Core",
 				value: poeCoreCourses,
-				className: "border-fuchsia-400/35 bg-fuchsia-500/12 text-fuchsia-100",
+				className: "border-fuchsia-300/70 bg-fuchsia-100/90 text-fuchsia-800 dark:border-fuchsia-400/35 dark:bg-fuchsia-500/12 dark:text-fuchsia-100",
 			},
 			{
 				label: "Gen Eds",
 				value: genEdCourses,
-				className: "border-amber-400/35 bg-amber-500/12 text-amber-100",
+				className: "border-amber-300/70 bg-amber-100/90 text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/12 dark:text-amber-100",
 			},
 		];
 	}, [primaryCourses]);
@@ -656,6 +671,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 			`You are AlfieAI helping a student with a generated schedule for ${result?.term || "the selected term"}.`,
 			`Primary POEs: ${primaryPoeText || "Not specified"}.`,
 			result?.secondaryEmphases.length ? `Secondary emphases: ${result.secondaryEmphases.join(", ")}.` : "Secondary emphases: none.",
+			`Requested credit load: ${creditPreferenceText || "Not specified"}.`,
 			"Current calendar courses:",
 			...primaryCourses.map((course) => `- ${course.courseCode}: ${course.title} (${course.credits} credits) | ${course.section.meetings.join(" | ") || "TBA"}`),
 			backupCourses.length ? "Backup courses:" : "Backup courses: none.",
@@ -742,6 +758,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 						<p className="mt-1.5 text-sm text-default-600 dark:text-default-500">
 							POE{primaryPoeValues.length === 1 ? "" : "s"}: {primaryPoeText}
 							{result.secondaryEmphases.length > 0 ? ` • Secondary emphases: ${result.secondaryEmphases.join(", ")}` : ""}
+							{creditPreferenceText ? ` • Credit load: ${creditPreferenceText}` : ""}
 						</p>
 						<div className="mt-3 flex flex-wrap gap-2 text-sm">
 							{scheduleSummaryChips.map((chip) => (
@@ -750,7 +767,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 									key={chip.label}
 								>
 									<span className="text-[11px] uppercase tracking-[0.18em] opacity-80">{chip.label}</span>
-									<span className="text-sm font-semibold text-white">{chip.value}</span>
+									<span className="text-sm font-semibold">{chip.value}</span>
 								</span>
 							))}
 						</div>
@@ -877,7 +894,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 										<div className="grid grid-cols-[84px_repeat(5,minmax(0,1fr))]">
 											<div className="relative" style={{ height: `${calendarHeight}px` }}>
 												{hourTicks.slice(0, -1).map((tick) => (
-													<div className="absolute right-3 rounded-full bg-zinc-950/95 px-2 py-0.5 text-[11px] font-medium text-zinc-300 shadow-sm" key={tick} style={{ top: `${((tick - calendarWindow.startMinutes) / 60) * HOUR_ROW_HEIGHT}px`, transform: "translateY(-50%)" }}>
+													<div className="absolute right-3 rounded-full border border-default-300 bg-content1 px-2 py-0.5 text-[11px] font-medium text-default-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/95 dark:text-zinc-300" key={tick} style={{ top: `${((tick - calendarWindow.startMinutes) / 60) * HOUR_ROW_HEIGHT}px`, transform: "translateY(-50%)" }}>
 														{formatHourLabel(tick)}
 													</div>
 												))}
@@ -1037,12 +1054,12 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 			) : null}
 
 			<Modal isOpen={catalogModalOpen} onOpenChange={setCatalogModalOpen} size="5xl" placement="center">
-				<ModalContent className="bg-zinc-950/95 text-zinc-100">
+				<ModalContent className="bg-content1 text-foreground dark:bg-zinc-950/95 dark:text-zinc-100">
 					{(closeCatalog) => (
 						<>
 							<ModalHeader className="flex flex-col gap-2">
-								<p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Course Catalog</p>
-								<h3 className="text-2xl font-semibold text-white">Add courses directly to your schedule</h3>
+								<p className="text-xs font-semibold uppercase tracking-[0.22em] text-default-500 dark:text-zinc-400">Course Catalog</p>
+								<h3 className="text-2xl font-semibold text-foreground dark:text-zinc-100">Add courses directly to your schedule</h3>
 							</ModalHeader>
 							<ModalBody>
 								<div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -1056,17 +1073,17 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 									/>
 									<Switch isSelected={catalogFitOnly} onValueChange={setCatalogFitOnly} color="secondary" size="sm">
 										<div className="text-left">
-											<p className="font-medium text-white">Only show courses that fit open time slots</p>
-											<p className="text-xs text-zinc-400">Filters out courses that conflict with your current primary schedule.</p>
+											<p className="font-medium text-foreground dark:text-zinc-100">Only show courses that fit open time slots</p>
+											<p className="text-xs text-default-500 dark:text-zinc-400">Filters out courses that conflict with your current primary schedule.</p>
 										</div>
 									</Switch>
 								</div>
 
 								<div className="mt-2 max-h-[55vh] overflow-y-auto space-y-3 pr-1">
-									{catalogLoading && <p className="text-sm text-zinc-300">Loading term catalog...</p>}
+									{catalogLoading && <p className="text-sm text-default-600 dark:text-zinc-300">Loading term catalog...</p>}
 									{catalogError && <p className="text-sm text-danger-600 dark:text-danger-300">{catalogError}</p>}
 									{!catalogLoading && !catalogError && groupedCatalog.length === 0 && (
-										<p className="text-sm text-zinc-400">No catalog courses match the current filters.</p>
+										<p className="text-sm text-default-500 dark:text-zinc-400">No catalog courses match the current filters.</p>
 									)}
 									{groupedCatalog.map((sections) => {
 										const first = sections[0];
@@ -1075,24 +1092,24 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 											<div key={normalizeCourseCode(first.courseCode)} className="rounded-xl border border-default-200 bg-default-50/40 p-4 sm:p-5 dark:border-default-700 dark:bg-zinc-900/55">
 												<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 													<div>
-														<p className="text-xs uppercase tracking-wider text-zinc-400">{first.courseCode} · {first.credits} credits</p>
-														<h4 className="mt-1 text-xl font-semibold leading-tight text-white">{first.title}</h4>
+														<p className="text-xs uppercase tracking-wider text-default-500 dark:text-zinc-400">{first.courseCode} · {first.credits} credits</p>
+														<h4 className="mt-1 text-xl font-semibold leading-tight text-foreground dark:text-zinc-100">{first.title}</h4>
 													</div>
 													<div className="flex flex-wrap gap-2 text-xs">
 														<span className="rounded-full bg-default-100 px-3 py-1 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">{sections.length} section{sections.length === 1 ? "" : "s"}</span>
 														<span className="rounded-full bg-default-100 px-3 py-1 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">{openSections} open</span>
 													</div>
 												</div>
-												{first.description ? <p className="mt-3 text-sm leading-relaxed text-zinc-300">{first.description}</p> : null}
+												{first.description ? <p className="mt-3 text-sm leading-relaxed text-default-700 dark:text-zinc-300">{first.description}</p> : null}
 												<div className="mt-4 rounded-lg border border-default-200 bg-content1/60 p-4 dark:border-default-700 dark:bg-zinc-950/70">
-													<p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Available sections</p>
+													<p className="text-xs font-semibold uppercase tracking-wide text-default-500 dark:text-zinc-400">Available sections</p>
 													<div className="mt-3 divide-y divide-default-200 dark:divide-default-800">
 													{sections.map((section) => (
 															<div key={section.section.sectionName} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
 																<div>
-																	<p className="text-sm font-semibold text-zinc-100">Section {section.section.sectionName}</p>
-																	<p className="mt-1 text-xs text-zinc-400">{section.section.meetings.join(" | ") || "TBA"}</p>
-																	<p className="mt-1 text-xs text-zinc-500">{section.section.instructors[0] || "TBA"} • {section.section.location || "TBA"}</p>
+																	<p className="text-sm font-semibold text-foreground dark:text-zinc-100">Section {section.section.sectionName}</p>
+																	<p className="mt-1 text-xs text-default-500 dark:text-zinc-400">{section.section.meetings.join(" | ") || "TBA"}</p>
+																	<p className="mt-1 text-xs text-default-500 dark:text-zinc-500">{section.section.instructors[0] || "TBA"} • {section.section.location || "TBA"}</p>
 																</div>
 																<div className="flex items-center gap-3 self-start sm:self-center">
 																	<span className="rounded-full bg-default-100 px-3 py-1 text-xs text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">{section.section.openSeats} open</span>
@@ -1120,19 +1137,19 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 					setSelectedCourse(null);
 				}
 			}} placement="center" size="3xl">
-				<ModalContent className="bg-zinc-950/95 text-zinc-100">
+				<ModalContent className="bg-content1 text-foreground dark:bg-zinc-950/95 dark:text-zinc-100">
 					{(onClose) => (
 						selectedCourse ? (
 							<>
 								<ModalHeader className="flex flex-col gap-2">
-									<p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">Course details</p>
-									<h3 className="text-2xl font-semibold text-white">{selectedCourse.courseCode}: {selectedCourse.title}</h3>
+									<p className="text-xs font-semibold uppercase tracking-[0.22em] text-default-500 dark:text-zinc-400">Course details</p>
+									<h3 className="text-2xl font-semibold text-foreground dark:text-zinc-100">{selectedCourse.courseCode}: {selectedCourse.title}</h3>
 								</ModalHeader>
 								<ModalBody>
 									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 										<div className="rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/70">
-											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Section</p>
-											<div className="mt-3 space-y-2 text-sm text-zinc-300">
+											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-default-500 dark:text-zinc-400">Section</p>
+											<div className="mt-3 space-y-2 text-sm text-default-700 dark:text-zinc-300">
 												<p><FiBookOpen className="mr-2 inline-block" size={14} />Section {selectedCourse.section.sectionName}</p>
 												<p><FiClock className="mr-2 inline-block" size={14} />{selectedCourse.credits} credits</p>
 												<p><FiMapPin className="mr-2 inline-block" size={14} />{selectedCourse.section.location || "TBA"}</p>
@@ -1140,8 +1157,8 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 											</div>
 										</div>
 										<div className="rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/70">
-											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Availability</p>
-											<div className="mt-3 space-y-2 text-sm text-zinc-300">
+											<p className="text-xs font-semibold uppercase tracking-[0.18em] text-default-500 dark:text-zinc-400">Availability</p>
+											<div className="mt-3 space-y-2 text-sm text-default-700 dark:text-zinc-300">
 												<p>{selectedCourse.section.openSeats} open / {selectedCourse.section.capacity} seats</p>
 												<p>{selectedCourse.section.waitlisted} waitlisted</p>
 												<p>Status: {selectedCourse.section.status}</p>
@@ -1149,16 +1166,16 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 										</div>
 									</div>
 									<div className="mt-4 rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/70">
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Meetings</p>
-										<div className="mt-3 space-y-2 text-sm text-zinc-300">
+										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-default-500 dark:text-zinc-400">Meetings</p>
+										<div className="mt-3 space-y-2 text-sm text-default-700 dark:text-zinc-300">
 											{selectedCourse.section.meetings.length > 0 ? selectedCourse.section.meetings.map((meeting) => (
 												<p key={meeting}>{meeting}</p>
 											)) : <p>TBA</p>}
 										</div>
 									</div>
 									<div className="mt-4 rounded-2xl border border-default-200 bg-default-50/70 p-4 dark:border-default-700 dark:bg-zinc-900/70">
-										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Course context</p>
-										<p className="mt-2 text-sm leading-relaxed text-zinc-300">{selectedCourse.description || "No description provided."}</p>
+										<p className="text-xs font-semibold uppercase tracking-[0.18em] text-default-500 dark:text-zinc-400">Course context</p>
+										<p className="mt-2 text-sm leading-relaxed text-default-700 dark:text-zinc-300">{selectedCourse.description || "No description provided."}</p>
 										<div className="mt-3 flex flex-wrap gap-2">
 											{selectedCourse.categories.map((category) => (
 												<span className="rounded-full bg-secondary-100 px-3 py-1 text-xs font-medium text-secondary-600 dark:bg-secondary-500/15 dark:text-secondary-500" key={category}>{category}</span>

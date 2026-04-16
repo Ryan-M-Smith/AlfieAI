@@ -12,7 +12,7 @@ import {
 import { courseSchema, departmentCodes } from "@/lib/course-schema";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const modelID = process.env.GEMINI_COURSES_MODEL_ID || process.env.GEMINI_MODEL_ID || "gemini-3-flash-preview";
+const modelID = "gemini-3-flash-preview";
 
 const context = {
 	text:  `You are AlfieAI - an AI model designed to help students at Juniata College.

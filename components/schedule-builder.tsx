@@ -1,6 +1,8 @@
 "use client";
 
 import {
+	Autocomplete,
+	AutocompleteItem,
 	Button,
 	Input,
 	Link,
@@ -21,7 +23,7 @@ import { LuCircleHelp, LuFileUp, LuPlus, LuSparkles, LuTrash2 } from "react-icon
 
 import ScheduleBuilderResult from "@/components/schedule-builder-result";
 
-import type { ScheduleGenerationResult } from "@/lib/schedule-ai";
+import type { CreditLoadProfile, ScheduleGenerationResult } from "@/lib/schedule-ai";
 
 interface PlannerOptionsResponse {
 	terms: string[];
@@ -39,6 +41,8 @@ interface PlannerFormState {
 	term: string;
 	studentPoes: EmphasisField[];
 	guidance: string;
+	creditLoadProfile: CreditLoadProfile;
+	customTargetCredits: string;
 	openSeatsOnly: boolean;
 	secondaryEmphases: EmphasisField[];
 }
@@ -48,6 +52,13 @@ interface ErrorResponse {
 }
 
 const OTHER_OPTION_KEY = "__other__";
+const creditLoadOptions: Array<{ key: CreditLoadProfile; label: string; description: string }> = [
+	{ key: "part-time", label: "Part-time", description: "Below 12 credits" },
+	{ key: "light", label: "Light", description: "12-13 credits" },
+	{ key: "moderate", label: "Moderate", description: "14-17 credits" },
+	{ key: "heavy", label: "Heavy", description: "18+ credits" },
+	{ key: "custom", label: "Custom", description: "Pick your own target" },
+];
 
 function newEmphasisField(prefix: "primary" | "secondary"): EmphasisField {
 	const random = Math.random().toString(36).slice(2, 9);
@@ -62,7 +73,9 @@ const defaultForm: PlannerFormState = {
 	term: "",
 	studentPoes: [],
 	guidance: "",
-	openSeatsOnly: true,
+	creditLoadProfile: "moderate",
+	customTargetCredits: "15",
+	openSeatsOnly: false,
 	secondaryEmphases: [],
 };
 
@@ -111,6 +124,27 @@ export default function ScheduleBuilder() {
 			.filter(Boolean),
 		[form.secondaryEmphases],
 	);
+	const resolvedTargetCredits = useMemo(() => {
+		if (form.creditLoadProfile === "part-time") {
+			return 10;
+		}
+		if (form.creditLoadProfile === "light") {
+			return 12;
+		}
+		if (form.creditLoadProfile === "moderate") {
+			return 15;
+		}
+		if (form.creditLoadProfile === "heavy") {
+			return 18;
+		}
+
+		const parsed = Number(form.customTargetCredits.trim());
+		if (!Number.isFinite(parsed)) {
+			return 15;
+		}
+
+		return Math.min(24, Math.max(1, Math.round(parsed)));
+	}, [form.creditLoadProfile, form.customTargetCredits]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -239,6 +273,9 @@ export default function ScheduleBuilder() {
 			if (resolvedPrimaryPoes.length === 0) {
 				throw new Error("Add at least one primary POE before generating guidance.");
 			}
+			if (form.creditLoadProfile === "custom" && !form.customTargetCredits.trim()) {
+				throw new Error("Enter a custom credit target before generating guidance.");
+			}
 
 			const response = await fetch("/api/courses/scheduling/insights", {
 				method: "POST",
@@ -249,6 +286,8 @@ export default function ScheduleBuilder() {
 					primaryPoes: resolvedPrimaryPoes,
 					poe: resolvedPoe,
 					secondaryEmphases: resolvedSecondaryEmphases,
+					creditLoadProfile: form.creditLoadProfile,
+					targetCredits: resolvedTargetCredits,
 					currentGuidance: form.guidance,
 					stream: true,
 				}),
@@ -329,12 +368,17 @@ export default function ScheduleBuilder() {
 			if (resolvedPrimaryPoes.length === 0) {
 				throw new Error("Please add at least one primary POE.");
 			}
+			if (form.creditLoadProfile === "custom" && !form.customTargetCredits.trim()) {
+				throw new Error("Please enter a custom credit target.");
+			}
 
 			const formData = new FormData();
 			formData.append("term", form.term.trim());
 			formData.append("primaryPoes", JSON.stringify(resolvedPrimaryPoes));
 			formData.append("poe", resolvedPoe);
 			formData.append("secondaryEmphases", JSON.stringify(resolvedSecondaryEmphases));
+			formData.append("creditLoadProfile", form.creditLoadProfile);
+			formData.append("targetCredits", String(resolvedTargetCredits));
 			formData.append("guidance", form.guidance.trim());
 			formData.append("openSeatsOnly", String(form.openSeatsOnly));
 
@@ -431,28 +475,27 @@ export default function ScheduleBuilder() {
 									) : form.studentPoes.map((item) => (
 										<div className="flex flex-col gap-3" key={item.id}>
 											<div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
-												<Select
+													<Autocomplete
 													label={form.studentPoes.length > 1? `POE ${form.studentPoes.indexOf(item) + 1}` : "POE"}
 													labelPlacement="outside"
-													items={poeSelectOptions}
-													selectedKeys={item.selection ? [item.selection] : []}
-													onSelectionChange={(keys) => {
-														const selected = Array.from(keys as Set<Key>)[0];
-														if (!selected) {
-															return;
-														}
+														defaultItems={poeSelectOptions}
+														value={item.selection || null}
+														onChange={(value: Key | null) => {
+															if (value == null) {
+																return;
+															}
 
-														const nextSelection = String(selected);
-														updatePrimaryPoe(item.id, {
-															selection: nextSelection,
-															customValue: nextSelection === OTHER_OPTION_KEY ? item.customValue : "",
-														});
-													}}
+															const nextSelection = String(value);
+															updatePrimaryPoe(item.id, {
+																selection: nextSelection,
+																customValue: nextSelection === OTHER_OPTION_KEY ? item.customValue : "",
+															});
+														}}
 													isDisabled={poes.length === 0 && !loadingOptions}
 													placeholder="Choose a POE"
 												>
-													{(option) => <SelectItem key={option.key}>{option.label}</SelectItem>}
-												</Select>
+														{(option) => <AutocompleteItem key={option.key}>{option.label}</AutocompleteItem>}
+													</Autocomplete>
 
 												<Button
 													variant="flat"
@@ -493,18 +536,17 @@ export default function ScheduleBuilder() {
 										{form.secondaryEmphases.map((item, index) => (
 											<div className="flex flex-col gap-3" key={item.id}>
 												<div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
-													<Select
+													<Autocomplete
 														label={form.studentPoes.length > 1? `Secondary Emphasis ${form.studentPoes.indexOf(item) + 1}` : "Secondary Emphasis"}
 														labelPlacement="outside"
-														items={poeSelectOptions}
-														selectedKeys={item.selection ? [item.selection] : []}
-														onSelectionChange={(keys) => {
-															const selected = Array.from(keys as Set<Key>)[0];
-															if (!selected) {
+														defaultItems={poeSelectOptions}
+														value={item.selection || null}
+														onChange={(value: Key | null) => {
+															if (value == null) {
 																return;
 															}
 
-															const nextSelection = String(selected);
+															const nextSelection = String(value);
 															updateSecondaryEmphasis(item.id, {
 																selection: nextSelection,
 																customValue: nextSelection === OTHER_OPTION_KEY ? item.customValue : "",
@@ -512,8 +554,8 @@ export default function ScheduleBuilder() {
 														}}
 														placeholder="Choose a secondary emphasis"
 													>
-														{(option) => <SelectItem key={option.key}>{option.label}</SelectItem>}
-													</Select>
+														{(option) => <AutocompleteItem key={option.key}>{option.label}</AutocompleteItem>}
+													</Autocomplete>
 
 													<Button
 														variant="flat"
@@ -594,7 +636,7 @@ export default function ScheduleBuilder() {
 					</div>
 				</div>
 
-				<div className="max-w-md">
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 					<Select
 						label="Term"
 						labelPlacement="outside"
@@ -612,6 +654,42 @@ export default function ScheduleBuilder() {
 							<SelectItem key={term}>{term}</SelectItem>
 						))}
 					</Select>
+
+					<div className="flex flex-col gap-2">
+						<Select
+							label="Credit load"
+							labelPlacement="outside"
+							selectedKeys={form.creditLoadProfile ? [form.creditLoadProfile] : []}
+							onSelectionChange={(keys) => {
+								const selected = Array.from(keys as Set<Key>)[0];
+								if (!selected) {
+									return;
+								}
+
+								updateForm("creditLoadProfile", String(selected) as CreditLoadProfile);
+							}}
+							placeholder="Select credit load"
+						>
+							{creditLoadOptions.map((option) => (
+								<SelectItem key={option.key} description={option.description}>
+									{option.label}
+								</SelectItem>
+							))}
+						</Select>
+
+						{form.creditLoadProfile === "custom" && (
+							<Input
+								type="number"
+								label="Custom target credits"
+								labelPlacement="outside"
+								placeholder="e.g. 16"
+								min={1}
+								max={24}
+								value={form.customTargetCredits}
+								onValueChange={(value) => updateForm("customTargetCredits", value)}
+							/>
+						)}
+					</div>
 				</div>
 
 				<div className="flex flex-col gap-4">

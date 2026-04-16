@@ -49,6 +49,7 @@
     "next": "^16.2.3",
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
+    "pdf2json": "^4.0.2",
     "react": "19.2.5",
     "react-aiwriter": "^1.0.0",
     "react-dom": "19.2.5",
