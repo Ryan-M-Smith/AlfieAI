@@ -67,15 +67,15 @@ export default function Navbar(): JSX.Element {
 				dark:bg-zinc-950/45 border-slate-300 backdrop-blur-lg bg-transparent
 			`}>
 				<div className="flex items-center gap-x-4 pl-1">
-					<Dropdown disableAnimation>
+					<Dropdown classNames={{ content: "rounded-[20px]" }} disableAnimation>
 						<DropdownTrigger>
-							<Button variant="ghost" endContent={<IoIosArrowDown size={20}/>}>
+							<Button variant="ghost" radius="full" endContent={<IoIosArrowDown size={20}/>}>
 								{page.card}
 							</Button>
 						</DropdownTrigger>
 
-						<DropdownMenu aria-label="Static Actions" disabledKeys={ [page.name] }>
-							<DropdownSection title="Tools">
+						<DropdownMenu aria-label="Static Actions" disabledKeys={[ page.name ]}>
+							<DropdownSection title="Tools" classNames={{ heading: "text-[10px] font-semibold uppercase tracking-[0.22em]"}}>
 								{ Object.values(tools).map((page: Page) => (
 									<DropdownItem 
 										key={page.name} 
@@ -88,7 +88,7 @@ export default function Navbar(): JSX.Element {
 								))}
 							</DropdownSection>
 
-							<DropdownSection title="Info">
+							<DropdownSection title="Info" classNames={{ heading: "text-[10px] font-semibold uppercase tracking-[0.22em]"}}>
 								{ Object.values(info).map((page: Page) => (
 									<DropdownItem 
 										key={page.name} 
