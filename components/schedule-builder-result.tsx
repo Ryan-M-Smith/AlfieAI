@@ -418,35 +418,25 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 		}
 
 		const preference = result.creditPreference;
-		if (preference.maxCredits === null && preference.minCredits !== null) {
-			return `${preference.label} (at least ${preference.minCredits} credits)`;
-		}
-		if (preference.minCredits !== null && preference.maxCredits !== null) {
-			return `${preference.label} (${preference.minCredits}-${preference.maxCredits} credits)`;
+		if (preference.profile === "custom") {
+			if (preference.maxCredits === null && preference.minCredits !== null) {
+				return `${preference.label} (at least ${preference.minCredits} credits)`;
+			}
+			if (preference.minCredits !== null && preference.maxCredits !== null) {
+				return `${preference.label} (${preference.minCredits}-${preference.maxCredits} credits)`;
+			}
 		}
 
 		return preference.label;
 	}, [result]);
-	const completedEvidence = useMemo(
-		() => [...new Set(result?.requirementsProgress.completedCourseCodes || [])].sort((left, right) => left.localeCompare(right)),
-		[result?.requirementsProgress.completedCourseCodes]
-	);
-	const requirementEvidence = useMemo(
-		() => [...new Set(result?.requirementsProgress.requirementMentions || [])].sort((left, right) => left.localeCompare(right)),
-		[result?.requirementsProgress.requirementMentions]
-	);
-	const transferEvidence = useMemo(
-		() => [...new Set(result?.requirementsProgress.transferMentions || [])].sort((left, right) => left.localeCompare(right)),
-		[result?.requirementsProgress.transferMentions]
-	);
 	const scheduleSummaryChips = useMemo(() => {
 		const totalCredits = primaryCourses.reduce((sum, course) => sum + Number(course.credits || 0), 0);
 		const genEdCourses = primaryCourses.filter((course) => inferRequirementCategories(course.categories).length > 0).length;
 		const poeCoreCourses = Math.max(0, primaryCourses.length - genEdCourses);
 
-		return [
+		const chips = [
 			{
-				label: "Scheduled",
+				label: "Courses",
 				value: primaryCourses.length,
 				className: "border-cyan-300/70 bg-cyan-100/90 text-cyan-800 dark:border-cyan-400/35 dark:bg-cyan-500/12 dark:text-cyan-100",
 			},
@@ -466,6 +456,31 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 				className: "border-amber-300/70 bg-amber-100/90 text-amber-800 dark:border-amber-400/35 dark:bg-amber-500/12 dark:text-amber-100",
 			},
 		];
+
+		const prePlannedCount = primaryCourses.filter((c) => c.selectionSource === "user").length;
+
+		if (prePlannedCount > 0) {
+			chips.push({
+				label: "Pre-planned",
+				value: prePlannedCount,
+				className: "border-violet-300/70 bg-violet-100/90 text-violet-800 dark:border-violet-400/35 dark:bg-violet-500/12 dark:text-violet-300",
+			});
+		}
+
+		return chips;
+	}, [primaryCourses]);
+
+	const conflictingCourseKeys = useMemo(() => {
+		const keys = new Set<string>();
+		for (let i = 0; i < primaryCourses.length; i++) {
+			for (let j = i + 1; j < primaryCourses.length; j++) {
+				if (coursesConflict(primaryCourses[i], primaryCourses[j])) {
+					keys.add(getCourseInstanceKey(primaryCourses[i]));
+					keys.add(getCourseInstanceKey(primaryCourses[j]));
+				}
+			}
+		}
+		return keys;
 	}, [primaryCourses]);
 
 	const calendarWindow = useMemo(() => buildCalendarWindow(primaryCourses), [primaryCourses]);
@@ -810,15 +825,27 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 							</div>
 
 							<div className="mt-4 space-y-4 pr-1 2xl:pr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+								{result.detectedPreRegisteredCourses && result.detectedPreRegisteredCourses.length > 0 && (
+									<div className="flex items-start gap-2.5 rounded-2xl border border-success-300/50 bg-success-50/80 px-4 py-3 dark:border-success-500/20 dark:bg-success-500/8">
+										<FiUser className="mt-0.5 shrink-0 text-success-600 dark:text-success-400" size={14} />
+										<p className="text-xs text-success-700 dark:text-success-400">
+											<span className="font-semibold">Detected from your transcript: </span>
+											{result.detectedPreRegisteredCourses.join(", ")} — already registered for {result.term}. Locked in as User&apos;s Choice.
+										</p>
+									</div>
+								)}
 								{primaryCourses.map((course) => {
-									const isAlfieChoice = originalPrimaryCourseKeys.has(getCourseInstanceKey(course));
+									const isUserChoice = course.selectionSource === "user";
+									const isAlfieChoice = course.selectionSource === "alfie" || (!course.selectionSource && originalPrimaryCourseKeys.has(getCourseInstanceKey(course)));
 
 									return (
 									<div
 										className={`rounded-2xl border px-4 py-3 shadow-sm ${
-											isAlfieChoice
-												? "border-secondary-300/45 bg-secondary-50/75 dark:border-secondary-500/20 dark:bg-secondary-500/8"
-												: "border-default-300 bg-default-50/70 dark:border-default-700 dark:bg-zinc-900/70"
+											isUserChoice
+												? "border-success-300/45 bg-success-50/75 dark:border-success-500/20 dark:bg-success-500/8"
+												: isAlfieChoice
+													? "border-secondary-300/45 bg-secondary-50/75 dark:border-secondary-500/20 dark:bg-secondary-500/8"
+													: "border-default-300 bg-default-50/70 dark:border-default-700 dark:bg-zinc-900/70"
 										}`}
 										key={getCourseInstanceKey(course)}
 									>
@@ -826,7 +853,12 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 											<div className="min-w-0 flex-1">
 												<div className="flex flex-wrap items-center gap-2">
 													<p className="text-sm font-semibold text-foreground">{course.courseCode}: {course.title}</p>
-													{isAlfieChoice ? (
+													{isUserChoice ? (
+														<span className="inline-flex items-center gap-1 rounded-full border border-success-300/70 bg-success-100/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-success-700 dark:border-success-400/35 dark:bg-success-500/12 dark:text-success-400">
+															<FiUser size={11} />
+															User's choice
+														</span>
+													) : isAlfieChoice ? (
 														<span className="inline-flex items-center gap-1 rounded-full border border-secondary-300/70 bg-secondary-100/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-secondary-600 dark:border-secondary-400/35 dark:bg-secondary-500/12 dark:text-secondary-500">
 															<LuSparkles size={11} />
 															Alfie's choice
@@ -838,7 +870,9 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 											</div>
 											<div className="flex flex-col gap-2">
 												<Button size="sm" variant="flat" onPress={() => setSelectedCourse(course)}>Details</Button>
-												<Button size="sm" color="danger" variant="flat" startContent={<FiTrash2 size={13} />} onPress={() => void removeCourseFromSchedule(course)}>Remove</Button>
+												{!isUserChoice && (
+													<Button size="sm" color="danger" variant="flat" startContent={<FiTrash2 size={13} />} onPress={() => void removeCourseFromSchedule(course)}>Remove</Button>
+												)}
 											</div>
 										</div>
 									</div>
@@ -875,7 +909,11 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 									<p className="text-xs font-semibold uppercase tracking-[0.22em] text-default-500 dark:text-zinc-400">Calendar</p>
 									<h3 className="mt-1 text-xl font-semibold text-foreground">Current primary schedule</h3>
 								</div>
-								<p className="text-xs text-default-500 dark:text-zinc-400">Only primary courses are displayed.</p>
+								<p className="text-xs text-justify justify-end text-default-500 dark:text-zinc-400 max-w-sm">
+									Optimal schedule based on user input, designed with generative AI. Please
+									double-check all suggestions and consult your advisor before making any
+									scheudling decisions.
+								</p>
 							</div>
 
 							{calendarEvents.length === 0 ? (
@@ -904,23 +942,39 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 													{hourTicks.map((tick) => (
 														<div className="absolute inset-x-0 border-t border-default-200/70 dark:border-white/10" key={`${day.key}-${tick}`} style={{ top: `${((tick - calendarWindow.startMinutes) / 60) * HOUR_ROW_HEIGHT}px`, zIndex: 0 }} />
 													))}
-													{calendarEvents.filter((event) => event.day === day.key).map((event) => {
+													{calendarEvents.filter((event) => event.day === day.key).map((event, eventIdx) => {
 														const top = ((event.startMinutes - calendarWindow.startMinutes) / 60) * HOUR_ROW_HEIGHT;
 														const height = Math.max(46, ((event.endMinutes - event.startMinutes) / 60) * HOUR_ROW_HEIGHT - 6);
 														const durationMinutes = event.endMinutes - event.startMinutes;
 														const showMeeting = durationMinutes >= 65;
+														const isConflicting = conflictingCourseKeys.has(getCourseInstanceKey(event.course));
+														const colorClass = isConflicting
+															? "border-red-600/60 bg-red-600 shadow-red-900/40"
+															: event.colorClassName;
 														return (
-															<button
-																className={`absolute inset-x-2 overflow-hidden rounded-2xl border px-3 py-1 text-left shadow-lg transition hover:scale-[1.01] hover:shadow-xl ${event.colorClassName}`}
-																key={`${event.course.courseCode}-${event.course.section.sectionName}-${event.day}-${event.startMinutes}`}
-																onClick={() => setSelectedCourse(event.course)}
+															<div
+																className={`group absolute inset-x-2 overflow-hidden rounded-2xl border shadow-lg transition hover:scale-[1.01] hover:shadow-xl ${colorClass}`}
+																key={`${event.course.courseCode}-${event.course.section.sectionName}-${event.day}-${event.startMinutes}-${eventIdx}`}
 																style={{ top: `${top + 3}px`, height: `${height}px`, zIndex: 1 }}
-																type="button"
 															>
-																<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{event.course.courseCode}</p>
-																<p className="mt-1 text-base font-semibold leading-tight text-white">{event.course.title}</p>
-																{showMeeting ? <p className="mt-1 text-[10px] leading-snug text-white/75">{event.course.section.meetings[0] || "TBA"}</p> : null}
-															</button>
+																<button
+																	className="absolute inset-0 px-3 py-1 text-left"
+																	onClick={() => setSelectedCourse(event.course)}
+																	type="button"
+																>
+																	<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{event.course.courseCode}</p>
+																	<p className="mt-1 text-base font-semibold leading-tight text-white">{event.course.title}</p>
+																	{showMeeting ? <p className="mt-1 text-[10px] leading-snug text-white/75">{event.course.section.meetings[0] || "TBA"}</p> : null}
+																</button>
+																<button
+																	aria-label={`Remove ${event.course.courseCode}`}
+																	className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition hover:bg-black/55 group-hover:opacity-100"
+																	onClick={(e) => { e.stopPropagation(); void removeCourseFromSchedule(event.course); }}
+																	type="button"
+																>
+																	<FiX size={11} />
+																</button>
+															</div>
 														);
 													})}
 												</div>
@@ -936,9 +990,6 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 				{activeTab === "requirements" && (
 					<RequirementsProgressPanel
 						progress={result.requirementsProgress}
-						completedEvidence={completedEvidence}
-						requirementEvidence={requirementEvidence}
-						transferEvidence={transferEvidence}
 					/>
 				)}
 

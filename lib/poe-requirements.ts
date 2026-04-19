@@ -98,6 +98,14 @@ export interface PoeRequirementProgressItem {
 	progressRatio: number;
 	phase: "core" | "elective" | "capstone";
 	remainingCourseCodes: string[];
+	/** Numeric count of completed items (courses or credits) for display */
+	completedCount: number;
+	/** Numeric count of required items (courses or credits) for display */
+	requiredCount: number;
+	/** Unit of the counts */
+	countUnit: "course" | "credit";
+	/** Total credits earned toward this requirement group (supplemental display) */
+	completedCreditCount: number;
 }
 
 export interface PoeEvaluation {
@@ -238,17 +246,25 @@ function evaluateCourseCodeGroup(
 	const progressRatio = requiredCount === 0 ? 1 : Math.min(1, progressCount / requiredCount);
 	const hasStarted = completedCodes.length > 0 || plannedOnlyCodes.length > 0;
 
+	const completedCountVal = Math.min(requiredCount, completedCodes.length);
+	const completedCreditCount = completedCodes
+		.slice(0, requiredCount)
+		.reduce((sum, code) => sum + (completedMap.get(normalizeCourseCode(code))?.credits || 0), 0);
 	return {
 		id: group.id,
 		label: group.label,
 		status: toStatus(progressRatio, hasStarted),
 		required: requiredLabel,
-		completed: `${Math.min(requiredCount, completedCodes.length)} course${requiredCount === 1 ? "" : "s"}`,
+		completed: `${completedCountVal} course${requiredCount === 1 ? "" : "s"}`,
 		planned: `${Math.min(Math.max(0, requiredCount - completedCodes.length), plannedOnlyCodes.length)} course${requiredCount === 1 ? "" : "s"}`,
 		remaining: remainingCodes.length > 0 ? remainingCodes.join(", ") : "None",
 		progressRatio,
 		phase: group.phase || "core",
 		remainingCourseCodes: remainingCodes,
+		completedCount: completedCountVal,
+		requiredCount,
+		countUnit: "course",
+		completedCreditCount,
 	};
 }
 
@@ -282,6 +298,10 @@ function evaluateCreditsFromCoursesGroup(
 		progressRatio,
 		phase: group.phase || "elective",
 		remainingCourseCodes: remainingCodes,
+		completedCount: completedCredits,
+		requiredCount: group.minCredits,
+		countUnit: "credit",
+		completedCreditCount: completedCredits,
 	};
 }
 
@@ -311,6 +331,12 @@ function evaluatePrefixCountGroup(
 		progressRatio,
 		phase: group.phase || "elective",
 		remainingCourseCodes: [],
+		completedCount: Math.min(group.count, completedMatches.length),
+		requiredCount: group.count,
+		countUnit: "course",
+		completedCreditCount: completedMatches
+			.slice(0, group.count)
+			.reduce((sum, c) => sum + c.credits, 0),
 	};
 }
 
@@ -340,6 +366,10 @@ function evaluatePrefixCreditsGroup(
 		progressRatio,
 		phase: group.phase || "elective",
 		remainingCourseCodes: [],
+		completedCount: completedCredits,
+		requiredCount: group.minCredits,
+		countUnit: "credit",
+		completedCreditCount: completedCredits,
 	};
 }
 
@@ -377,10 +407,22 @@ function evaluateBundleGroup(
 		}
 	}
 
+	const bestCompletedCredits = (() => {
+		for (const bundle of group.bundles) {
+			const completedCodes = uniqueCourseCodes(bundle.courseCodes.filter((code) => completedMap.has(normalizeCourseCode(code))));
+			const total = bundle.courseCodes.length;
+			const progressRatio = total === 0 ? 1 : completedCodes.length / total;
+			if (progressRatio === best.progressRatio && completedCodes.length === best.completed) {
+				return completedCodes.reduce((sum, code) => sum + (completedMap.get(normalizeCourseCode(code))?.credits || 0), 0);
+			}
+		}
+		return 0;
+	})();
+
 	return {
 		id: group.id,
 		label: group.label,
-		status: toStatus(best.progressRatio, best.completed > 0 || best.planned > 0),
+		status: toStatus(Math.min(1, best.progressRatio), best.completed > 0),
 		required: `Approved sequence: ${best.label}`,
 		completed: `${best.completed} of ${best.total} courses`,
 		planned: `${best.planned} course${best.planned === 1 ? "" : "s"}`,
@@ -388,6 +430,10 @@ function evaluateBundleGroup(
 		progressRatio: Math.min(1, best.progressRatio),
 		phase: group.phase || "core",
 		remainingCourseCodes: best.remainingCourseCodes,
+		completedCount: best.completed,
+		requiredCount: best.total,
+		countUnit: "course",
+		completedCreditCount: bestCompletedCredits,
 	};
 }
 

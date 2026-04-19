@@ -1955,11 +1955,7 @@ export function buildCompletedCourseFilters(courseCodes: string[]): Record<strin
 	}));
 }
 
-export function planOptimalSchedule(
-	request: SchedulePlanningRequest,
-	availableCourses: Course[],
-	completedCatalogCourses: Course[]
-): SchedulePlanningResult {
+export function planOptimalSchedule(request: SchedulePlanningRequest, availableCourses: Course[], completedCatalogCourses: Course[]): SchedulePlanningResult {
 	const poeProfile = getPoeRequirementProfile(request.poe || "");
 	const capstoneCourseCodes = poeProfile ? getPoeCapstoneCourseCodes(poeProfile) : undefined;
 	const intent = derivePlannerIntent(request);

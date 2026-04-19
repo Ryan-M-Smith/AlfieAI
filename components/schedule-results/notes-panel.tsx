@@ -26,7 +26,7 @@ export default function NotesPanel({ reasoning, notes, warnings }: NotesPanelPro
 				<h3 className="mt-2 text-2xl font-semibold text-default-900 dark:text-zinc-50">Review before finalizing</h3>
 				<div className="mt-4 space-y-3 text-sm text-default-700 dark:text-zinc-200">
 					{warnings.length > 0 ? warnings.map((warning) => (
-						<div className="rounded-2xl border border-warning-300/70 bg-warning-50/90 px-4 py-3 text-warning-900 dark:border-warning-400/50 dark:bg-warning-500/20 dark:text-warning-100" key={warning}>{warning}</div>
+						<div className="rounded-2xl border border-warning-300/70 bg-warning-50/90 px-4 py-3 text-warning-900 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-200" key={warning}>{warning}</div>
 					)) : (
 						<div className="rounded-2xl border border-dashed border-default-300/70 bg-default-50/70 px-4 py-4 text-default-800 dark:border-default-700 dark:bg-zinc-900/65 dark:text-zinc-200">No warnings were raised for this run.</div>
 					)}

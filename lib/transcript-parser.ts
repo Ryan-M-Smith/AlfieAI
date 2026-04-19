@@ -13,13 +13,26 @@ const ENABLE_TRANSCRIPT_MODEL_ENRICHMENT = process.env.TRANSCRIPT_MODEL_ENRICHME
 const PDF_LINE_Y_TOLERANCE = 0.35;
 const TRANSCRIPT_PARSER_STRATEGY = (process.env.TRANSCRIPT_PARSER_STRATEGY || "ai-first").toLowerCase();
 const REQUIREMENT_LABELS = [
+	// Fixed/named requirements
 	"First-Year Composition",
 	"First-Year Foundations",
 	"First-Year Seminar",
 	"Connections",
+	"Capstone",
+	// Ways of Knowing
+	"Creative Expression",
+	"Formal Reasoning",
+	"Humanistic Thought",
+	"Scientific Process",
+	"Social Inquiry",
+	// Self and the World
+	"Ethical Responsibility",
+	"Global Engagement",
+	"Local Engagement",
+	"U.S. Experience",
 ];
-const REQUIREMENT_STATUS_PATTERN = /(?:\b(?:complete(?:d)?|fulfilled|satisfied|met|waived|pending|remaining|in[-\s]?progress)\b|[✓✔☑])/i;
-const REQUIREMENT_HINT_PATTERN = /\b(?:requirement|requirements|composition|foundation|seminar|connections?|gen(?:eral)?[\s-]*ed(?:ucation)?|distribution|poe|program of emphasis)\b/i;
+const REQUIREMENT_STATUS_PATTERN = /(?:\b(?:complete(?:d)?|fulfilled|satisfied|met|waived|pending|remaining|in[-\s]?progress|equivalency|noncourse)\b|[✓✔☑])/i;
+const REQUIREMENT_HINT_PATTERN = /\b(?:requirement|requirements?|composition|foundations?|seminars?|connections?|capstone|gen(?:eral)?[\s-]*ed(?:ucation)?|distribution|poe|program of emphasis|reasoning|inquiry|expression|engagement|responsibility|humanistic|creative|ethical|scientific|social|knowing|experience)\b/i;
 const FINAL_GRADE_TOKEN = /^(?:A|A-|A\+|B|B-|B\+|C|C-|C\+|D|D-|D\+|F|P|S|CR|NC)$/i;
 const NON_FINAL_GRADE_TOKEN = /^(?:IP|I|W|AU|NR|WP|WF)$/i;
 const TRANSCRIPT_PROMPT_FILE = path.join(process.cwd(), "prompts", "transcript-parser-prompt.md");
@@ -28,13 +41,17 @@ const DEFAULT_PDF_TO_JSON_PROMPT = [
 	"You are parsing a Self-Service Degree Progress PDF for scheduling.",
 	"Read the PDF directly, including OCR if needed.",
 	"Return JSON only with this exact shape:",
-	"{\"completed\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\",\"credits\":\"\",\"grade\":\"\"}],\"planned\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\"}],\"transfer\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\",\"credits\":\"\"}],\"requirements\":[{\"label\":\"\",\"status\":\"\"}]}",
+	"{\"completed\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\",\"credits\":\"\",\"grade\":\"\"}],\"planned\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\"}],\"transfer\":[{\"term\":\"\",\"courseCode\":\"\",\"title\":\"\",\"credits\":\"\"}],\"requirements\":[{\"label\":\"\",\"status\":\"\"}],\"poeSections\":[{\"label\":\"\",\"courses\":[{\"courseCode\":\"\",\"title\":\"\",\"status\":\"\",\"grade\":\"\",\"term\":\"\",\"credits\":\"\"}]}]}",
 	"Rules:",
 	"- Preserve course suffixes exactly when visible (e.g. BI-305CW, CS-255C).",
 	"- Use completed for final/earned-credit courses.",
 	"- Use planned for in-progress or non-final courses.",
 	"- Use transfer for AP/transfer/test credit.",
-	"- requirements should contain requirement marker labels and status values: completed, pending, in-progress, or unknown.",
+	"- requirements should contain an entry for EVERY gen-ed and core requirement section visible in the PDF. Use the exact section label (e.g. \"First-Year Composition\", \"Humanistic Thought\", \"Global Engagement\", \"Capstone\") as the label field.",
+	"- Valid requirement status values: completed, waived, in-progress, pending, or unknown.",
+	"- Use \"waived\" when the section is marked Waived or fulfilled via Noncourse Equivalency.",
+	"- Use \"completed\" when the section shows all required courses/credits completed (e.g. \"1 of 1 Completed\" or \"3 of 3 Credits Completed\").",
+	"- poeSections: For EVERY named POE/program-of-emphasis requirement section in the PDF (e.g. 'Data Science Core', 'Data Science Elective Credits', 'Computer Science Core Requirements'), include the section label and ALL courses listed in its requirement table. The label MUST always include the parent program name — if the PDF section heading is just 'Core Requirements', 'Elective Courses', or 'Capstone' nested under a 'Data Science' heading, use 'Data Science Core Requirements', 'Data Science Elective Courses', 'Data Science Capstone'. Strip any leading letter prefix like 'A.' but never strip the program name. For each course record the exact courseCode, title, status (completed/in_progress/remaining), grade, term, and credits as shown in the table.",
 	"- If unreadable, return empty arrays for all keys.",
 ].join("\n");
 
@@ -87,11 +104,28 @@ interface TranscriptModelRequirement {
 	status?: string;
 }
 
+interface TranscriptPoeSectionCourse {
+	courseCode?: string;
+	title?: string;
+	/** "completed" | "in_progress" | "remaining" as reported in the PDF section table */
+	status?: string;
+	grade?: string;
+	term?: string;
+	credits?: string | number;
+}
+
+interface TranscriptPoeSectionJson {
+	label?: string;
+	courses?: TranscriptPoeSectionCourse[];
+}
+
 interface TranscriptModelJson {
 	completed?: TranscriptModelJsonRecord[];
 	planned?: TranscriptModelJsonRecord[];
 	transfer?: TranscriptModelJsonRecord[];
 	requirements?: Array<string | TranscriptModelRequirement>;
+	/** Named POE requirement sections extracted directly from the degree progress PDF */
+	poeSections?: TranscriptPoeSectionJson[];
 }
 
 function extractTextCodeBlocks(markdown: string): string[] {
@@ -255,7 +289,12 @@ async function extractTranscriptJsonWithPdf2Json(pdfBuffer: Uint8Array): Promise
 			resolve(pdfData);
 		});
 
+		// pdf2json emits benign console warnings for unsupported PDF annotation types
+		// (e.g. "NOT valid form element", "Unsupported: field.type of Link"). Suppress them.
+		const originalWarn = console.warn;
+		console.warn = () => {};
 		parser.parseBuffer(Buffer.from(pdfBuffer));
+		console.warn = originalWarn;
 	});
 
 	parser.destroy();
@@ -288,13 +327,21 @@ async function extractTranscriptJsonFromPdf(pdfBuffer: Uint8Array): Promise<Tran
 }
 
 function normalizeTranscriptTerm(rawValue: string): string {
-	const match = rawValue.match(/\b(Spring|Summer|Fall)\s*(?:Term\s*)?(20\d{2})\b/i);
-	if (!match) {
-		return "";
+	const longMatch = rawValue.match(/\b(Spring|Summer|Fall)\s*(?:Term\s*)?(20\d{2})\b/i);
+	if (longMatch) {
+		const season = longMatch[1].charAt(0).toUpperCase() + longMatch[1].slice(1).toLowerCase();
+		return `${season} Term ${longMatch[2]}`;
 	}
 
-	const season = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-	return `${season} Term ${match[2]}`;
+	// Handle compact form: "23/FA", "24/SP", "25/SU"
+	const shortMatch = rawValue.match(/\b(\d{2})\/(FA|SP|SU)\b/i);
+	if (shortMatch) {
+		const year = 2000 + Number(shortMatch[1]);
+		const seasonMap: Record<string, string> = { FA: "Fall", SP: "Spring", SU: "Summer" };
+		return `${seasonMap[shortMatch[2].toUpperCase()]} Term ${year}`;
+	}
+
+	return "";
 }
 
 function findTrailingGrade(value: string): string {
@@ -360,13 +407,17 @@ function isNonFinalGrade(grade: string): boolean {
 	return Boolean(grade) && NON_FINAL_GRADE_TOKEN.test(grade);
 }
 
-function normalizeRequirementStatus(value: string): "completed" | "pending" | "in-progress" | "unknown" {
+function normalizeRequirementStatus(value: string): "completed" | "waived" | "pending" | "in-progress" | "unknown" {
 	const normalized = normalizeWhitespace(value).toLowerCase();
 	if (!normalized) {
 		return "unknown";
 	}
 
-	if (/(?:complete(?:d)?|fulfilled|satisfied|met|waived|[✓✔☑])/.test(normalized)) {
+	if (/(?:waived|equivalency|noncourse)/.test(normalized)) {
+		return "waived";
+	}
+
+	if (/(?:completed|fulfilled|satisfied|met|[✓✔☑])/.test(normalized)) {
 		return "completed";
 	}
 	if (/(?:in[-\s]?progress|ip\b)/.test(normalized)) {
@@ -379,7 +430,7 @@ function normalizeRequirementStatus(value: string): "completed" | "pending" | "i
 	return "unknown";
 }
 
-function formatRequirementRecord(label: string, status: "completed" | "pending" | "in-progress" | "unknown"): string {
+function formatRequirementRecord(label: string, status: "completed" | "waived" | "pending" | "in-progress" | "unknown"): string {
 	if (!label) {
 		return "";
 	}
@@ -387,8 +438,10 @@ function formatRequirementRecord(label: string, status: "completed" | "pending" 
 	return `REQUIREMENT | ${label} | ${status}`;
 }
 
-function extractRequirementLabel(line: string): { label: string; status: "completed" | "pending" | "in-progress" | "unknown" } | null {
-	if (!REQUIREMENT_STATUS_PATTERN.test(line) || !REQUIREMENT_HINT_PATTERN.test(line)) {
+function extractRequirementLabel(line: string): { label: string; status: "completed" | "waived" | "pending" | "in-progress" | "unknown" } | null {
+	// If the line contains an exact known label, only require a status token (bypass hint check)
+	const hasKnownLabel = REQUIREMENT_LABELS.some((l) => new RegExp(l, "i").test(line));
+	if (!REQUIREMENT_STATUS_PATTERN.test(line) || (!hasKnownLabel && !REQUIREMENT_HINT_PATTERN.test(line))) {
 		return null;
 	}
 
@@ -429,7 +482,66 @@ function buildDeterministicTranscript(rawTranscript: string): string {
 	let currentTerm = "";
 	const output = new Set<string>();
 
+	let totalCreditsAll: number | null = null;
+	let totalCreditsSchool: number | null = null;
+	let studentId: string | null = null;
+	// For multi-line requirement detection: track a label seen without a status
+	let pendingReqLabel: string | null = null;
+	let pendingReqLineIndex = -1;
+	let lineIndex = 0;
+
 	for (const line of lines) {
+		lineIndex++;
+
+		// Detect student ID: "Student ID: 1234567" or "ID: 1234567" or "Name (1234567)" (Ellucian header format)
+		if (!studentId) {
+			const idMatch = line.match(/(?:student\s+(?:id|number)|\bid\s*(?:number|#|no\.?)?)\s*[:#]?\s*(\d{5,10})\b/i)
+				?? line.match(/^[A-Za-z][A-Za-z ,.'\-]+\((\d{6,8})\)\s*$/i);
+			if (idMatch) {
+				studentId = idMatch[1];
+			}
+		}
+
+		// Multi-line requirement detection: if a known label appears without a status,
+		// record it as pending and apply the next nearby status line to it.
+		const labelWithoutStatus = REQUIREMENT_LABELS.find(
+			(l) => new RegExp(l, "i").test(line) && !REQUIREMENT_STATUS_PATTERN.test(line)
+		);
+		if (labelWithoutStatus) {
+			pendingReqLabel = labelWithoutStatus;
+			pendingReqLineIndex = lineIndex;
+		}
+
+		// If we have a pending label and the current line has a status, resolve it
+		if (pendingReqLabel && lineIndex > pendingReqLineIndex && lineIndex <= pendingReqLineIndex + 8) {
+			if (REQUIREMENT_STATUS_PATTERN.test(line)) {
+				const resolvedStatus = normalizeRequirementStatus(line);
+				if (resolvedStatus !== "unknown") {
+					const record = formatRequirementRecord(pendingReqLabel, resolvedStatus);
+					if (record) {
+						output.add(record);
+					}
+					pendingReqLabel = null;
+				}
+			}
+		} else if (pendingReqLabel && lineIndex > pendingReqLineIndex + 8) {
+			pendingReqLabel = null; // window expired
+		}
+
+		// Detect "Total Credits from this School  127  of  120" before other logic
+		const schoolCreditsMatch = line.match(/total\s+credits?\s+from\s+this\s+school[^0-9]*(\d+(?:\.\d+)?)/i);
+		if (schoolCreditsMatch) {
+			totalCreditsSchool = Number(schoolCreditsMatch[1]);
+		}
+
+		// Detect "Total Credits  137  of  120" (but not the "from this school" variant)
+		if (!schoolCreditsMatch) {
+			const totalCreditsMatch = line.match(/^total\s+credits?[^a-z]*(\d+(?:\.\d+)?)/i);
+			if (totalCreditsMatch) {
+				totalCreditsAll = Number(totalCreditsMatch[1]);
+			}
+		}
+
 		const inferredTerm = normalizeTranscriptTerm(line);
 		if (inferredTerm) {
 			currentTerm = inferredTerm;
@@ -469,6 +581,13 @@ function buildDeterministicTranscript(rawTranscript: string): string {
 		}
 	}
 
+	if (totalCreditsAll !== null) {
+		output.add(`CREDIT_TOTALS | ${totalCreditsAll} | ${totalCreditsSchool ?? ""}`);
+	}
+	if (studentId) {
+		output.add(`STUDENT_ID | ${studentId}`);
+	}
+
 	return Array.from(output).join("\n");
 }
 
@@ -483,7 +602,7 @@ function normalizeStructuredOutput(text: string): string {
 		.replace(/\s*```$/i, "")
 		.split(/\r?\n+/)
 		.map((line) => normalizeWhitespace(line))
-		.filter((line) => /^(COMPLETED|PLANNED|TRANSFER|REQUIREMENT)\s*\|/i.test(line));
+		.filter((line) => /^(COMPLETED|PLANNED|TRANSFER|REQUIREMENT|CREDIT_TOTALS|STUDENT_ID|POE_COURSE)\s*\|/i.test(line));
 
 	return Array.from(new Set(normalized)).join("\n");
 }
@@ -585,6 +704,27 @@ function transcriptModelJsonToStructuredOutput(payload: TranscriptModelJson): st
 		const title = normalizeWhitespace(String(item.title || "")) || "Transfer Credit";
 		const credits = normalizeModelCredits(item.credits);
 		lines.add(`TRANSFER | ${term} | ${courseCode} | ${title} | ${credits}`);
+	}
+
+	for (const section of payload.poeSections || []) {
+		const sectionLabel = normalizeWhitespace(String(section.label || ""));
+		if (!sectionLabel) {
+			continue;
+		}
+
+		for (const course of section.courses || []) {
+			const courseCode = normalizeModelCourseCode(String(course.courseCode || ""));
+			if (!courseCode) {
+				continue;
+			}
+
+			const status = normalizeWhitespace(String(course.status || "")).toLowerCase() || "remaining";
+			const title = normalizeWhitespace(String(course.title || "")) || "Untitled Course";
+			const credits = normalizeModelCredits(course.credits);
+			const term = normalizeWhitespace(String(course.term || "")) || "Unknown Term";
+			const grade = normalizeWhitespace(String(course.grade || ""));
+			lines.add(`POE_COURSE | ${sectionLabel} | ${status} | ${courseCode} | ${title} | ${credits} | ${term} | ${grade}`);
+		}
 	}
 
 	for (const requirement of payload.requirements || []) {
@@ -704,7 +844,7 @@ function filterStructuredOutputAgainstRawText(text: string, rawTranscript: strin
 	for (const line of lines) {
 		const parts = line.split("|").map((part) => normalizeWhitespace(part));
 		const kind = (parts[0] || "").toUpperCase();
-		if (kind === "REQUIREMENT") {
+		if (kind === "REQUIREMENT" || kind === "CREDIT_TOTALS" || kind === "STUDENT_ID") {
 			retained.push(line);
 			continue;
 		}
@@ -722,6 +862,14 @@ function filterStructuredOutputAgainstRawText(text: string, rawTranscript: strin
 	return Array.from(new Set(retained)).join("\n");
 }
 
+/**
+ * Merges AI-parsed course output with deterministic output.
+ * Strategy: keep all AI course/transfer/planned lines as-is (the AI is better at
+ * reading course details). Only supplement with REQUIREMENT, CREDIT_TOTALS, and
+ * STUDENT_ID lines from the deterministic parser — these are the lines the AI
+ * doesn't reliably emit, and the only reason we run the deterministic pass at all.
+ * This prevents the same course from appearing twice with minor formatting differences.
+ */
 function mergeStructuredOutput(modelOutput: string, deterministicOutput: string): string {
 	const merged = new Set<string>();
 
@@ -732,9 +880,12 @@ function mergeStructuredOutput(modelOutput: string, deterministicOutput: string)
 		}
 	}
 
+	// Only supplement with metadata lines from the deterministic parser
 	for (const line of deterministicOutput.split(/\r?\n+/)) {
 		const normalized = normalizeWhitespace(line);
-		if (normalized) {
+		if (!normalized) continue;
+		const kind = normalized.split("|")[0].trim().toUpperCase();
+		if (kind === "REQUIREMENT" || kind === "CREDIT_TOTALS" || kind === "STUDENT_ID") {
 			merged.add(normalized);
 		}
 	}
@@ -841,31 +992,46 @@ async function extractStructuredTranscriptFromJsonPayload(transcriptJson: Transc
 }
 
 export async function extractTranscriptTextFromPdf(pdfBuffer: Uint8Array): Promise<string> {
+	// Always start local extraction in parallel — needed to supply REQUIREMENT lines
+	// even when the AI succeeds at parsing courses.
+	const localPromise = (async () => {
+		const transcriptJson = await extractTranscriptJsonFromPdf(pdfBuffer);
+		const rawTranscript = normalizeAndTruncateRawTranscript(transcriptJson.flattenedLines.join("\n"));
+		const deterministicOutput = rawTranscript
+			? normalizeStructuredOutput(buildDeterministicTranscript(rawTranscript))
+			: "";
+		return { transcriptJson, rawTranscript, deterministicOutput };
+	})();
+
 	if (TRANSCRIPT_PARSER_STRATEGY !== "local-first") {
+		let aiOutput = "";
 		try {
-			const aiStructuredOutput = normalizeStructuredOutput(await extractStructuredTranscriptFromPdfPayload(pdfBuffer));
-			if (countStructuredCourseLines(aiStructuredOutput) > 0 || countRequirementLines(aiStructuredOutput) > 0) {
-				return aiStructuredOutput;
-			}
+			aiOutput = normalizeStructuredOutput(await extractStructuredTranscriptFromPdfPayload(pdfBuffer));
 		}
 		catch (error) {
 			if (!(error instanceof Error && /empty|invalid|not found|not supported/i.test(error.message))) {
 				console.warn("AI-first transcript parsing from PDF failed. Falling back to local parser.", error);
 			}
 		}
+
+		if (countStructuredCourseLines(aiOutput) > 0 || countRequirementLines(aiOutput) > 0) {
+			// Merge AI output with deterministic output so that REQUIREMENT lines from the
+			// deterministic parser (waived FYC, Humanistic Thought section headers, etc.)
+			// are always captured even when the AI doesn't emit them.
+			const { deterministicOutput } = await localPromise;
+			return deterministicOutput
+				? mergeStructuredOutput(aiOutput, deterministicOutput)
+				: aiOutput;
+		}
 	}
 
-	const transcriptJson = await extractTranscriptJsonFromPdf(pdfBuffer);
-	const rawTranscript = normalizeAndTruncateRawTranscript(transcriptJson.flattenedLines.join("\n"));
+	const { transcriptJson, rawTranscript, deterministicOutput } = await localPromise;
 
 	if (!rawTranscript) {
 		return "UNREADABLE TRANSCRIPT";
 	}
 
-	const deterministicOutput = normalizeStructuredOutput(buildDeterministicTranscript(rawTranscript));
-	const deterministicCourseLineCount = countStructuredCourseLines(deterministicOutput);
-
-	if (!ENABLE_TRANSCRIPT_MODEL_ENRICHMENT || deterministicCourseLineCount >= 2) {
+	if (!ENABLE_TRANSCRIPT_MODEL_ENRICHMENT || countStructuredCourseLines(deterministicOutput) >= 2) {
 		return deterministicOutput || "UNREADABLE TRANSCRIPT";
 	}
 
@@ -894,7 +1060,7 @@ export async function extractTranscriptTextFromPdf(pdfBuffer: Uint8Array): Promi
 	}
 
 	const modelCourseLineCount = countStructuredCourseLines(normalizedModelOutput);
-	if (modelCourseLineCount < deterministicCourseLineCount) {
+	if (modelCourseLineCount < countStructuredCourseLines(deterministicOutput)) {
 		return deterministicOutput;
 	}
 

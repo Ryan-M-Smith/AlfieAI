@@ -19,11 +19,11 @@ import {
 } from "@heroui/react";
 import { ChangeEvent, Key, use, useEffect, useMemo, useRef, useState } from "react";
 import { GrSchedules } from "react-icons/gr";
-import { LuCircleHelp, LuFileUp, LuPlus, LuSparkles, LuTrash2 } from "react-icons/lu";
+import { LuCircleHelp, LuFileUp, LuPlus, LuSearch, LuSparkles, LuTrash2, LuX } from "react-icons/lu";
 
 import ScheduleBuilderResult from "@/components/schedule-builder-result";
 
-import type { CreditLoadProfile, ScheduleGenerationResult } from "@/lib/schedule-ai";
+import type { CreditLoadProfile, ScheduleGenerationResult, SchedulingMode } from "@/lib/schedule-ai";
 
 interface PlannerOptionsResponse {
 	terms: string[];
@@ -45,6 +45,13 @@ interface PlannerFormState {
 	customTargetCredits: string;
 	openSeatsOnly: boolean;
 	secondaryEmphases: EmphasisField[];
+	schedulingMode: SchedulingMode;
+	/** When true, the student has pre-registered courses they want locked in */
+	useUserChosenMode: boolean;
+	/** When true, the student wants specific courses always included */
+	useAlwaysInclude: boolean;
+	/** Course codes the student always wants in their schedule */
+	alwaysIncludeCourses: string[];
 }
 
 interface ErrorResponse {
@@ -52,6 +59,14 @@ interface ErrorResponse {
 }
 
 const OTHER_OPTION_KEY = "__other__";
+const schedulingModeOptions: Array<{ key: SchedulingMode; label: string; description: string }> = [
+	{ key: "balanced", label: "Balanced", description: "Mix of core requirements, gen-eds, and electives" },
+	{ key: "core-focused", label: "Core-focused", description: "Prioritize major/POE core requirements" },
+	{ key: "gen-ed-push", label: "Gen-ed push", description: "Fill outstanding gen-ed categories first" },
+	{ key: "fun", label: "Light & fun", description: "Enjoyable, lower-stakes schedule" },
+	{ key: "ai-choice", label: "AI's choice", description: "Let AlfieAI decide what's optimal" },
+];
+
 const creditLoadOptions: Array<{ key: CreditLoadProfile; label: string; description: string }> = [
 	{ key: "part-time", label: "Part-time", description: "Below 12 credits" },
 	{ key: "light", label: "Light", description: "12-13 credits" },
@@ -77,6 +92,10 @@ const defaultForm: PlannerFormState = {
 	customTargetCredits: "15",
 	openSeatsOnly: false,
 	secondaryEmphases: [],
+	schedulingMode: "balanced",
+	useUserChosenMode: false,
+	useAlwaysInclude: false,
+	alwaysIncludeCourses: [],
 };
 
 function resolveChoice(selection: string, customValue: string): string {
@@ -85,6 +104,11 @@ function resolveChoice(selection: string, customValue: string): string {
 	}
 
 	return selection.trim();
+}
+
+interface AlwaysIncludeResult {
+	code: string;
+	title: string;
 }
 
 export default function ScheduleBuilder() {
@@ -99,7 +123,11 @@ export default function ScheduleBuilder() {
 	const [result, setResult] = useState<ScheduleGenerationResult | null>(null);
 	const [degreeProgressFile, setDegreeProgressFile] = useState<File | null>(null);
 	const [activeView, setActiveView] = useState<"form" | "result">("form");
+	const [alwaysIncludeQuery, setAlwaysIncludeQuery] = useState("");
+	const [alwaysIncludeResults, setAlwaysIncludeResults] = useState<AlwaysIncludeResult[]>([]);
+	const [alwaysIncludeSearching, setAlwaysIncludeSearching] = useState(false);
 	const guidanceAbortRef = useRef<AbortController | null>(null);
+	const alwaysIncludeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const { isOpen, onOpen, onOpenChange } = useDisclosure();
 	const poeSelectOptions = useMemo(
 		() => [
@@ -201,6 +229,63 @@ export default function ScheduleBuilder() {
 
 	function updateForm<K extends keyof PlannerFormState>(field: K, value: PlannerFormState[K]) {
 		setForm((previous) => ({ ...previous, [field]: value }));
+	}
+
+	function searchAlwaysIncludeCourses(query: string) {
+		if (alwaysIncludeTimerRef.current) {
+			clearTimeout(alwaysIncludeTimerRef.current);
+		}
+
+		// Use a shorter debounce for empty query (browse all) so the list
+		// appears quickly when the user first focuses the input.
+		const debounceMs = query.trim() ? 300 : 100;
+
+		alwaysIncludeTimerRef.current = setTimeout(() => {
+			void (async () => {
+				setAlwaysIncludeSearching(true);
+				try {
+					const response = await fetch("/api/courses/catalog", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							query: query.trim(),
+							page: 1,
+							pageSize: 50,
+							filters: form.term ? { term: form.term } : {},
+						}),
+					});
+
+					if (!response.ok) {
+						return;
+					}
+
+					const data = (await response.json()) as { results: Array<{ course_code: string; title: string }> };
+					const seen = new Set(form.alwaysIncludeCourses);
+					setAlwaysIncludeResults(
+						(data.results || []).filter((c) => !seen.has(c.course_code)).map((c) => ({ code: c.course_code, title: c.title })),
+					);
+				}
+				catch {
+					// silently ignore search errors
+				}
+				finally {
+					setAlwaysIncludeSearching(false);
+				}
+			})();
+		}, debounceMs);
+	}
+
+	function addAlwaysIncludeCourse(code: string) {
+		if (!form.alwaysIncludeCourses.includes(code)) {
+			updateForm("alwaysIncludeCourses", [...form.alwaysIncludeCourses, code]);
+		}
+
+		setAlwaysIncludeQuery("");
+		setAlwaysIncludeResults([]);
+	}
+
+	function removeAlwaysIncludeCourse(code: string) {
+		updateForm("alwaysIncludeCourses", form.alwaysIncludeCourses.filter((c) => c !== code));
 	}
 
 	function handleDegreeProgressChange(event: ChangeEvent<HTMLInputElement>) {
@@ -381,9 +466,17 @@ export default function ScheduleBuilder() {
 			formData.append("targetCredits", String(resolvedTargetCredits));
 			formData.append("guidance", form.guidance.trim());
 			formData.append("openSeatsOnly", String(form.openSeatsOnly));
+			formData.append("schedulingMode", form.schedulingMode);
+			if (form.useUserChosenMode) {
+				formData.append("userChosenCourses", "true");
+			}
 
 			if (degreeProgressFile) {
 				formData.append("degreeProgressFile", degreeProgressFile);
+			}
+
+			if (form.useAlwaysInclude && form.alwaysIncludeCourses.length > 0) {
+				formData.append("alwaysIncludeCourses", form.alwaysIncludeCourses.join(","));
 			}
 
 			const response = await fetch("/api/courses/scheduling", {
@@ -690,6 +783,25 @@ export default function ScheduleBuilder() {
 							/>
 						)}
 					</div>
+
+					<Select
+						label="Scheduling priority"
+						labelPlacement="outside"
+						selectedKeys={[form.schedulingMode]}
+						onSelectionChange={(keys) => {
+							const selected = Array.from(keys as Set<Key>)[0];
+							if (selected) {
+								updateForm("schedulingMode", String(selected) as SchedulingMode);
+							}
+						}}
+						placeholder="Select scheduling priority"
+					>
+						{schedulingModeOptions.map((option) => (
+							<SelectItem key={option.key} description={option.description}>
+								{option.label}
+							</SelectItem>
+						))}
+					</Select>
 				</div>
 
 				<div className="flex flex-col gap-4">
@@ -700,7 +812,7 @@ export default function ScheduleBuilder() {
 						minRows={6}
 						value={form.guidance}
 						onValueChange={(value) => updateForm("guidance", value)}
-					/>
+				/>
 					<div className="flex flex-wrap items-center gap-3">
 						<Button
 							variant="flat"
@@ -730,18 +842,98 @@ export default function ScheduleBuilder() {
 					</Switch>
 				</div>
 
-				{optionsWarning && (
-					<div className="rounded-2xl border border-warning-200 bg-warning-50/70 px-4 py-3 text-sm text-warning-900 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
-						{optionsWarning}
-					</div>
-				)}
+				<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+					<Switch
+						isSelected={form.useUserChosenMode}
+						onValueChange={(value) => updateForm("useUserChosenMode", value)}
+						color="secondary"
+						size="sm"
+					>
+						<div className="text-left">
+							<p className="font-medium text-foreground">I've already chosen some courses</p>
+							<p className="text-xs text-default-600 dark:text-default-300">Lock in your pre-registered courses as <strong>User's Choice</strong> — AlfieAI suggests what to add around them.</p>
+						</div>
+					</Switch>
+				</div>
 
-				{error && (
-					<div className="rounded-2xl border border-danger-200 bg-danger-50/80 px-4 py-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-300">
-						{error}
-					</div>
-				)}
-
+				<div className="flex flex-col gap-3 rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+					<Switch
+						isSelected={form.useAlwaysInclude}
+						onValueChange={(value) => {
+							updateForm("useAlwaysInclude", value);
+							if (!value) {
+								updateForm("alwaysIncludeCourses", []);
+								setAlwaysIncludeQuery("");
+								setAlwaysIncludeResults([]);
+							}
+						}}
+						color="secondary"
+						size="sm"
+					>
+						<div className="text-left">
+							<p className="font-medium text-foreground">Always include specific courses</p>
+							<p className="text-xs text-default-600 dark:text-default-300">Pick courses from the catalog that AlfieAI must include in your schedule.</p>
+						</div>
+					</Switch>
+					{form.useAlwaysInclude && (
+						<div className="flex flex-col gap-3 pt-1">
+							{form.alwaysIncludeCourses.length > 0 && (
+								<div className="flex flex-wrap gap-2">
+									{form.alwaysIncludeCourses.map((code) => (
+										<span
+											key={code}
+											className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-3 py-1 text-xs font-medium text-secondary-800 dark:bg-secondary-900/40 dark:text-secondary-200"
+										>
+											{code}
+											<button
+												type="button"
+												aria-label={`Remove ${code}`}
+												className="ml-0.5 rounded-full hover:text-danger"
+												onClick={() => removeAlwaysIncludeCourse(code)}
+											>
+												<LuX size={11} />
+											</button>
+										</span>
+									))}
+								</div>
+							)}
+							<div className="relative">
+								<Input
+									size="sm"
+									placeholder={form.term ? "Search courses by name or code…" : "Select a term above to search courses"}
+									isDisabled={!form.term}
+									value={alwaysIncludeQuery}
+									onValueChange={(value) => {
+										setAlwaysIncludeQuery(value);
+										searchAlwaysIncludeCourses(value);
+									}}
+									onFocus={() => {
+										if (alwaysIncludeResults.length === 0) {
+											searchAlwaysIncludeCourses(alwaysIncludeQuery);
+										}
+									}}
+									startContent={alwaysIncludeSearching ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-secondary border-t-transparent" /> : <LuSearch size={14} className="text-default-400" />}
+								/>
+								{alwaysIncludeResults.length > 0 && (
+									<ul className="absolute z-20 mt-1 w-full rounded-xl border border-default-200 bg-content1 py-1 shadow-lg dark:border-default-700 dark:bg-zinc-900">
+										{alwaysIncludeResults.map((r) => (
+											<li key={r.code}>
+												<button
+													type="button"
+													className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-default-100 dark:hover:bg-zinc-800"
+													onClick={() => addAlwaysIncludeCourse(r.code)}
+												>
+													<span className="font-medium text-secondary-600 dark:text-secondary-300">{r.code}</span>
+													<span className="truncate text-default-600 dark:text-default-400">{r.title}</span>
+												</button>
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						</div>
+					)}
+				</div>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 					<Button
 						color="secondary"
