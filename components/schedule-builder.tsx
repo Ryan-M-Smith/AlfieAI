@@ -803,6 +803,122 @@ export default function ScheduleBuilder() {
 						))}
 					</Select>
 				</div>
+				
+				<div className="flex flex-col gap-y-5">
+					<div className="flex flex-col gap-1">
+						<p className="text-sm font-medium text-foreground">Course preferences</p>
+						<p className="text-xs text-default-600 dark:text-default-500">
+							Bring some courses you've already chosen or ask AlfieAI to prioritize sections with open seats.
+						</p>
+					</div>
+
+					<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+						<Switch
+							isSelected={form.openSeatsOnly}
+							onValueChange={(value) => updateForm("openSeatsOnly", value)}
+							color="secondary"
+							size="sm"
+						>
+							<div className="text-left">
+								<p className="font-medium text-foreground">Prefer open sections only</p>
+								<p className="text-xs text-default-600 dark:text-default-300">Try to avoid closed/waitlisted sections when possible.</p>
+							</div>
+						</Switch>
+					</div>
+
+					<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+						<Switch
+							isSelected={form.useUserChosenMode}
+							onValueChange={(value) => updateForm("useUserChosenMode", value)}
+							color="secondary"
+							size="sm"
+						>
+							<div className="text-left">
+								<p className="font-medium text-foreground">I've already chosen some courses</p>
+								<p className="text-xs text-default-600 dark:text-default-300">Lock in your pre-registered courses as <strong>User's Choice</strong> — AlfieAI suggests what to add around them.</p>
+							</div>
+						</Switch>
+					</div>
+
+					<div className="flex flex-col gap-3 rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
+						<Switch
+							isSelected={form.useAlwaysInclude}
+							onValueChange={(value) => {
+								updateForm("useAlwaysInclude", value);
+								if (!value) {
+									updateForm("alwaysIncludeCourses", []);
+									setAlwaysIncludeQuery("");
+									setAlwaysIncludeResults([]);
+								}
+							}}
+							color="secondary"
+							size="sm"
+						>
+							<div className="text-left">
+								<p className="font-medium text-foreground">Always include specific courses</p>
+								<p className="text-xs text-default-600 dark:text-default-300">Pick courses from the catalog that AlfieAI must include in your schedule.</p>
+							</div>
+						</Switch>
+						{form.useAlwaysInclude && (
+							<div className="flex flex-col gap-3 pt-1">
+								{form.alwaysIncludeCourses.length > 0 && (
+									<div className="flex flex-wrap gap-2">
+										{form.alwaysIncludeCourses.map((code) => (
+											<span
+												key={code}
+												className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-3 py-1 text-xs font-medium text-secondary-800 dark:bg-secondary-900/40 dark:text-secondary-200"
+											>
+												{code}
+												<button
+													type="button"
+													aria-label={`Remove ${code}`}
+													className="ml-0.5 rounded-full hover:text-danger"
+													onClick={() => removeAlwaysIncludeCourse(code)}
+												>
+													<LuX size={11} />
+												</button>
+											</span>
+										))}
+									</div>
+								)}
+								<div className="relative">
+									<Input
+										size="sm"
+										placeholder={form.term ? "Search courses by name or code…" : "Select a term above to search courses"}
+										isDisabled={!form.term}
+										value={alwaysIncludeQuery}
+										onValueChange={(value) => {
+											setAlwaysIncludeQuery(value);
+											searchAlwaysIncludeCourses(value);
+										}}
+										onFocus={() => {
+											if (alwaysIncludeResults.length === 0) {
+												searchAlwaysIncludeCourses(alwaysIncludeQuery);
+											}
+										}}
+										startContent={alwaysIncludeSearching ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-secondary border-t-transparent" /> : <LuSearch size={14} className="text-default-400" />}
+									/>
+									{alwaysIncludeResults.length > 0 && (
+										<ul className="absolute z-20 mt-1 w-full rounded-xl border border-default-200 bg-content1 py-1 shadow-lg dark:border-default-700 dark:bg-zinc-900">
+											{alwaysIncludeResults.map((r) => (
+												<li key={r.code}>
+													<button
+														type="button"
+														className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-default-100 dark:hover:bg-zinc-800"
+														onClick={() => addAlwaysIncludeCourse(r.code)}
+													>
+														<span className="font-medium text-secondary-600 dark:text-secondary-300">{r.code}</span>
+														<span className="truncate text-default-600 dark:text-default-400">{r.title}</span>
+													</button>
+												</li>
+											))}
+										</ul>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
 
 				<div className="flex flex-col gap-4">
 					<Textarea
@@ -813,137 +929,38 @@ export default function ScheduleBuilder() {
 						value={form.guidance}
 						onValueChange={(value) => updateForm("guidance", value)}
 				/>
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-wrap justify-between items-center gap-3">
+						<div className="flex flex-col justify-center items-start gap-2">
+							<Button
+								variant="flat"
+								color="secondary"
+								startContent={<LuSparkles size={16}/>}
+								onPress={() => void generateGuidanceDraft()}
+								isLoading={loadingGuidance}
+								isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
+							>
+								Draft with AlfieAI
+							</Button>
+							
+							<p className="text-xs text-default-600 dark:text-default-500">
+								Autofill a high-quality preference paragraph you can edit before generating.
+							</p>
+						</div>
+					
 						<Button
-							variant="flat"
 							color="secondary"
-							startContent={<LuSparkles size={16} />}
-							onPress={() => void generateGuidanceDraft()}
-							isLoading={loadingGuidance}
-						isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
+							size="md"
+							onPress={() => void generateSchedule()}
+							isLoading={loadingPlan}
+							isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
 						>
-							Draft with AlfieAI
+							Generate schedule
 						</Button>
-						<p className="text-xs text-default-600 dark:text-default-300">Autofill a high-quality preference paragraph you can edit before generating.</p>
 					</div>
 				</div>
 
-				<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
-					<Switch
-						isSelected={form.openSeatsOnly}
-						onValueChange={(value) => updateForm("openSeatsOnly", value)}
-						color="secondary"
-						size="sm"
-					>
-						<div className="text-left">
-							<p className="font-medium text-foreground">Prefer open sections only</p>
-							<p className="text-xs text-default-600 dark:text-default-300">Try to avoid closed/waitlisted sections when possible.</p>
-						</div>
-					</Switch>
-				</div>
-
-				<div className="rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
-					<Switch
-						isSelected={form.useUserChosenMode}
-						onValueChange={(value) => updateForm("useUserChosenMode", value)}
-						color="secondary"
-						size="sm"
-					>
-						<div className="text-left">
-							<p className="font-medium text-foreground">I've already chosen some courses</p>
-							<p className="text-xs text-default-600 dark:text-default-300">Lock in your pre-registered courses as <strong>User's Choice</strong> — AlfieAI suggests what to add around them.</p>
-						</div>
-					</Switch>
-				</div>
-
-				<div className="flex flex-col gap-3 rounded-2xl border border-default-200 bg-default-50/70 px-4 py-3 dark:border-default-700 dark:bg-zinc-900/60">
-					<Switch
-						isSelected={form.useAlwaysInclude}
-						onValueChange={(value) => {
-							updateForm("useAlwaysInclude", value);
-							if (!value) {
-								updateForm("alwaysIncludeCourses", []);
-								setAlwaysIncludeQuery("");
-								setAlwaysIncludeResults([]);
-							}
-						}}
-						color="secondary"
-						size="sm"
-					>
-						<div className="text-left">
-							<p className="font-medium text-foreground">Always include specific courses</p>
-							<p className="text-xs text-default-600 dark:text-default-300">Pick courses from the catalog that AlfieAI must include in your schedule.</p>
-						</div>
-					</Switch>
-					{form.useAlwaysInclude && (
-						<div className="flex flex-col gap-3 pt-1">
-							{form.alwaysIncludeCourses.length > 0 && (
-								<div className="flex flex-wrap gap-2">
-									{form.alwaysIncludeCourses.map((code) => (
-										<span
-											key={code}
-											className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-3 py-1 text-xs font-medium text-secondary-800 dark:bg-secondary-900/40 dark:text-secondary-200"
-										>
-											{code}
-											<button
-												type="button"
-												aria-label={`Remove ${code}`}
-												className="ml-0.5 rounded-full hover:text-danger"
-												onClick={() => removeAlwaysIncludeCourse(code)}
-											>
-												<LuX size={11} />
-											</button>
-										</span>
-									))}
-								</div>
-							)}
-							<div className="relative">
-								<Input
-									size="sm"
-									placeholder={form.term ? "Search courses by name or code…" : "Select a term above to search courses"}
-									isDisabled={!form.term}
-									value={alwaysIncludeQuery}
-									onValueChange={(value) => {
-										setAlwaysIncludeQuery(value);
-										searchAlwaysIncludeCourses(value);
-									}}
-									onFocus={() => {
-										if (alwaysIncludeResults.length === 0) {
-											searchAlwaysIncludeCourses(alwaysIncludeQuery);
-										}
-									}}
-									startContent={alwaysIncludeSearching ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-secondary border-t-transparent" /> : <LuSearch size={14} className="text-default-400" />}
-								/>
-								{alwaysIncludeResults.length > 0 && (
-									<ul className="absolute z-20 mt-1 w-full rounded-xl border border-default-200 bg-content1 py-1 shadow-lg dark:border-default-700 dark:bg-zinc-900">
-										{alwaysIncludeResults.map((r) => (
-											<li key={r.code}>
-												<button
-													type="button"
-													className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-default-100 dark:hover:bg-zinc-800"
-													onClick={() => addAlwaysIncludeCourse(r.code)}
-												>
-													<span className="font-medium text-secondary-600 dark:text-secondary-300">{r.code}</span>
-													<span className="truncate text-default-600 dark:text-default-400">{r.title}</span>
-												</button>
-											</li>
-										))}
-									</ul>
-								)}
-							</div>
-						</div>
-					)}
-				</div>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-					<Button
-						color="secondary"
-						size="md"
-						onPress={() => void generateSchedule()}
-						isLoading={loadingPlan}
-						isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
-					>
-						Generate schedule
-					</Button>
+					
 				</div>
 			</section>
 

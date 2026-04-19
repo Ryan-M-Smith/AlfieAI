@@ -810,7 +810,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 						<section className="flex min-h-0 min-w-0 flex-col rounded-3xl border border-default-200 bg-content1/80 p-4 dark:border-default-700 dark:bg-zinc-950/70 sm:p-5">
 							<div className="flex items-center justify-between gap-3">
 								<div>
-									<p className="text-xs font-semibold uppercase tracking-[0.22em] text-default-500 dark:text-default-600">Courses</p>
+									<p className="text-xs font-semibold uppercase tracking-[0.22em] text-default-600 dark:text-default-500">Courses</p>
 									<h3 className="mt-1 text-xl font-semibold text-foreground">Your courses</h3>
 								</div>
 								

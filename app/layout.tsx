@@ -13,6 +13,7 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
+import DataGridLines from "@/components/data-grid-lines";
 import { fontBig, fontBubble, fontChalkboard, fontRacing, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 					enableSystem: true,
 					disableTransitionOnChange: true
 				}}>
+					<DataGridLines />
 					<CookieConsentDialog/>
 
 					{children}
