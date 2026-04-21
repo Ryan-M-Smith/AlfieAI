@@ -360,6 +360,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 	const [assistantDraft, setAssistantDraft] = useState("");
 	const [assistantLoading, setAssistantLoading] = useState(false);
 	const catalogLoadPromiseRef = useRef<Promise<ScheduleCourseResult[]> | null>(null);
+	const catalogGenRef = useRef(0);
 	const assistantScrollRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -380,6 +381,9 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 			},
 		}))));
 		setReplacementState(null);
+		setCatalogCourses([]);
+		catalogLoadPromiseRef.current = null;
+		catalogGenRef.current += 1;
 	}, [result]);
 
 	useEffect(() => {
@@ -541,6 +545,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 			return catalogLoadPromiseRef.current;
 		}
 
+		const gen = catalogGenRef.current;
 		const loadPromise = (async () => {
 			setCatalogLoading(true);
 			setCatalogError("");
@@ -587,16 +592,23 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 				}
 				while (page <= totalPages && page <= 20);
 
-				setCatalogCourses(merged);
+				// Discard result if a newer schedule was generated while loading
+				if (catalogGenRef.current === gen) {
+					setCatalogCourses(merged);
+				}
 				return merged;
 			}
 			catch (fetchError) {
 				const message = (fetchError as Error).message || "Could not load catalog courses.";
-				setCatalogError(message);
+				if (catalogGenRef.current === gen) {
+					setCatalogError(message);
+				}
 				return [];
 			}
 			finally {
-				setCatalogLoading(false);
+				if (catalogGenRef.current === gen) {
+					setCatalogLoading(false);
+				}
 				catalogLoadPromiseRef.current = null;
 			}
 		})();

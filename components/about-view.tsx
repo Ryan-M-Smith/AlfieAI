@@ -164,7 +164,14 @@ function buildMarqueeRows(words: string[]): string[][] {
 
 const marqueeRows = buildMarqueeRows(communityVerbs);
 
-const communityWords = ["the Community", "Students", "Professors", "Faculty", "You"];
+const communityWords = [
+	"the Community",
+	"Students",
+	"Professors",
+	"Faculty",
+	"Alumni",
+	"You"
+];
 
 export default function AboutView(): JSX.Element {
 	const shouldReduceMotion = useReducedMotion();
@@ -239,7 +246,8 @@ export default function AboutView(): JSX.Element {
 							</h1>
 
 							<p className="max-w-2xl text-pretty text-base leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-lg">
-								From courses and professors to events and people, AlfieAI combines critical campus workflows into a single AI experience that feels quick, personal, and useful.
+								From courses and professors to events and alumni, AlfieAI combines critical campus workflows
+								into a single AI platform that feels quick, personal, and empowering.
 							</p>
 
 							<div className="flex flex-wrap gap-2">
@@ -393,11 +401,11 @@ export default function AboutView(): JSX.Element {
 							</p>
 						</div>
 
-						<div className="relative min-h-120 overflow-hidden rounded-3xl border border-zinc-200/70 bg-zinc-950/90 p-5 shadow-xl shadow-zinc-900/40 dark:border-zinc-700 dark:bg-zinc-950/95 sm:p-6">
-							<div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r from-zinc-950 to-transparent" />
-							<div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l from-zinc-950 to-transparent" />
-							<div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-linear-to-b from-zinc-950 to-transparent" />
-							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-zinc-950 to-transparent" />
+						<div className="relative min-h-120 overflow-hidden rounded-3xl border border-zinc-200/70 bg-zinc-100/80 p-5 shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-950/95 dark:shadow-zinc-900/40 sm:p-6">
+							<div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-linear-to-r from-zinc-100/80 to-transparent dark:from-zinc-950" />
+							<div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-linear-to-l from-zinc-100/80 to-transparent dark:from-zinc-950" />
+							<div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-linear-to-b from-zinc-100/80 to-transparent dark:from-zinc-950" />
+							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-zinc-100/80 to-transparent dark:from-zinc-950" />
 
 							<div className="space-y-4 pt-2">
 								{marqueeRows.map((row, rowIndex) => {
@@ -417,7 +425,7 @@ export default function AboutView(): JSX.Element {
 											>
 												{[...row, ...row, ...row, ...row].map((word, wordIndex) => (
 													<span
-														className="alfie-rainbow-word shrink-0 rounded-full border border-white/20 px-4 py-2 text-base font-semibold uppercase tracking-[0.2em] sm:text-lg"
+														className="alfie-rainbow-word shrink-0 rounded-full border border-zinc-300/60 px-4 py-2 text-base font-semibold uppercase tracking-[0.2em] dark:border-white/20 sm:text-lg"
 														key={`${word}-${rowIndex}-${wordIndex}`}
 													>
 														{word}
@@ -450,22 +458,22 @@ export default function AboutView(): JSX.Element {
 					</p>
 					<div className="mt-6 flex flex-wrap gap-3">
 						<Link
-							href="/sustainability/water-retirement-voucher.pdf"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex items-center gap-2 rounded-full border border-lime-500/40 bg-lime-500/10 px-4 py-2 text-xs font-semibold text-lime-700 transition hover:bg-lime-500/20 dark:text-lime-300"
-						>
-							Terrapass Water Certificate
-							<PiCertificate size={13} />
-						</Link>
-
-						<Link
 							href="/sustainability/co2-retirement-voucher.pdf"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-500/20 dark:text-cyan-300"
 						>
 							Carbonmark Retirement Record
+							<PiCertificate size={13} />
+						</Link>
+
+						<Link
+							href="/sustainability/water-retirement-voucher.pdf"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-2 rounded-full border border-lime-500/40 bg-lime-500/10 px-4 py-2 text-xs font-semibold text-lime-700 transition hover:bg-lime-500/20 dark:text-lime-300"
+						>
+							Terrapass Water Certificate
 							<PiCertificate size={13} />
 						</Link>
 					</div>
@@ -495,17 +503,17 @@ export default function AboutView(): JSX.Element {
 
 				<div className="snap-start min-h-screen flex flex-col justify-center">
 				<Reveal className="mx-auto max-w-5xl px-6 py-12 sm:px-10 lg:px-14" id="founder-note" delay={0.12}>
-					<div className="rounded-[2rem] border border-zinc-200/70 bg-linear-to-br from-zinc-900 to-zinc-800 p-8 text-zinc-100 shadow-2xl shadow-zinc-900/25 sm:p-10">
-						<p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200">
+				<div className="rounded-[2rem] border border-zinc-200/70 bg-white/75 p-8 text-zinc-900 shadow-2xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-linear-to-br dark:from-zinc-900 dark:to-zinc-800 dark:text-zinc-100 dark:shadow-zinc-900/25 sm:p-10">
+						<p className="mb-4 inline-flex items-center gap-2 rounded-full border border-zinc-300/60 bg-zinc-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600 dark:border-white/20 dark:bg-white/10 dark:text-zinc-200">
 							<FiUser size={14} />
 							Founder&apos;s Note
 						</p>
 
-						<blockquote className="text-pretty text-xl leading-relaxed text-zinc-100 sm:text-2xl">
-							“AlfieAI was built to make campus life less confusing and more empowering. Every feature starts with one question: does this genuinely help students move forward?”
+						<blockquote className="text-pretty text-xl leading-relaxed text-zinc-900 dark:text-zinc-100 sm:text-2xl">
+							"AlfieAI was built to make campus life less confusing and more empowering. Every feature starts with one question: does this genuinely help students move forward?"
 						</blockquote>
 
-						<p className="mt-5 text-sm text-zinc-300 sm:text-base">
+						<p className="mt-5 text-sm text-zinc-600 dark:text-zinc-300 sm:text-base">
 							Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.
 						</p>
 					</div>

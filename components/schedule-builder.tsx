@@ -84,6 +84,42 @@ function newEmphasisField(prefix: "primary" | "secondary"): EmphasisField {
 	};
 }
 
+/**
+ * Returns the best default term from the available list.
+ * Picks the next upcoming term based on approximate term start months:
+ *   Spring → January (month 1)
+ *   Summer → June (month 6)
+ *   Fall   → August (month 8)
+ * Finds the first term that hasn't started yet, falling back to the first in the list.
+ */
+function getDefaultTerm(terms: string[]): string {
+	if (terms.length === 0) return "";
+	const now = new Date();
+	const nowYearMonth = now.getFullYear() * 100 + (now.getMonth() + 1);
+
+	function termStartMonth(term: string): number {
+		const lower = term.toLowerCase();
+		if (lower.includes("spring")) return 1;
+		if (lower.includes("summer")) return 6;
+		if (lower.includes("fall")) return 8;
+		return 1;
+	}
+	function termYear(term: string): number {
+		const match = term.match(/(19|20)\d{2}/);
+		return match ? Number(match[0]) : 0;
+	}
+	function termYearMonth(term: string): number {
+		return termYear(term) * 100 + termStartMonth(term);
+	}
+
+	// Among all upcoming non-summer terms, pick the chronologically closest
+	const upcoming = terms
+		.filter((t) => termYearMonth(t) >= nowYearMonth && !t.toLowerCase().includes("summer"))
+		.sort((a, b) => termYearMonth(a) - termYearMonth(b));
+
+	return upcoming[0] ?? terms[0];
+}
+
 const defaultForm: PlannerFormState = {
 	term: "",
 	studentPoes: [],
@@ -128,6 +164,7 @@ export default function ScheduleBuilder() {
 	const [alwaysIncludeSearching, setAlwaysIncludeSearching] = useState(false);
 	const guidanceAbortRef = useRef<AbortController | null>(null);
 	const alwaysIncludeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const alwaysIncludeContainerRef = useRef<HTMLDivElement>(null);
 	const { isOpen, onOpen, onOpenChange } = useDisclosure();
 	const poeSelectOptions = useMemo(
 		() => [
@@ -199,7 +236,7 @@ export default function ScheduleBuilder() {
 				setOptionsWarning((data.warnings || []).join(" "));
 				setForm((previous) => ({
 					...previous,
-					term: loadedTerms.includes(previous.term) ? previous.term : (loadedTerms[0] || ""),
+					term: loadedTerms.includes(previous.term) ? previous.term : getDefaultTerm(loadedTerms),
 					studentPoes: previous.studentPoes,
 				}));
 			}
@@ -225,6 +262,16 @@ export default function ScheduleBuilder() {
 		return () => {
 			guidanceAbortRef.current?.abort();
 		};
+	}, []);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (alwaysIncludeContainerRef.current && !alwaysIncludeContainerRef.current.contains(event.target as Node)) {
+				setAlwaysIncludeResults([]);
+			}
+		}
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
 	function updateForm<K extends keyof PlannerFormState>(field: K, value: PlannerFormState[K]) {
@@ -881,7 +928,7 @@ export default function ScheduleBuilder() {
 										))}
 									</div>
 								)}
-								<div className="relative">
+								<div className="relative" ref={alwaysIncludeContainerRef}>
 									<Input
 										size="sm"
 										placeholder={form.term ? "Search courses by name or code…" : "Select a term above to search courses"}
@@ -899,16 +946,16 @@ export default function ScheduleBuilder() {
 										startContent={alwaysIncludeSearching ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-secondary border-t-transparent" /> : <LuSearch size={14} className="text-default-400" />}
 									/>
 									{alwaysIncludeResults.length > 0 && (
-										<ul className="absolute z-20 mt-1 w-full rounded-xl border border-default-200 bg-content1 py-1 shadow-lg dark:border-default-700 dark:bg-zinc-900">
+										<ul className="absolute z-20 mt-1 w-full rounded-xl border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 											{alwaysIncludeResults.map((r) => (
 												<li key={r.code}>
 													<button
 														type="button"
-														className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-default-100 dark:hover:bg-zinc-800"
+														className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
 														onClick={() => addAlwaysIncludeCourse(r.code)}
 													>
 														<span className="font-medium text-secondary-600 dark:text-secondary-300">{r.code}</span>
-														<span className="truncate text-default-600 dark:text-default-400">{r.title}</span>
+														<span className="truncate text-zinc-600 dark:text-zinc-400">{r.title}</span>
 													</button>
 												</li>
 											))}

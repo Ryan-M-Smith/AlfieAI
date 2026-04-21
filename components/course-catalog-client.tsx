@@ -344,8 +344,8 @@ export default function CourseCatalogClient() {
 							updateFilters({ department: value || "" });
 						}}
 					>
-						{facets.departments.map((dept, index) => (
-							<SelectItem key={`${dept}-${index}`}>{dept}</SelectItem>
+					{facets.departments.map((dept) => (
+						<SelectItem key={dept}>{dept}</SelectItem>
 						))}
 					</Select>
 
@@ -358,8 +358,8 @@ export default function CourseCatalogClient() {
 							updateFilters({ term: value || "", year: value ? "" : filters.year });
 						}}
 					>
-						{sortedTerms.map((term, index) => (
-							<SelectItem key={`${term}-${index}`}>{term}</SelectItem>
+						{sortedTerms.map((term) => (
+							<SelectItem key={term}>{term}</SelectItem>
 						))}
 					</Select>
 
@@ -372,8 +372,8 @@ export default function CourseCatalogClient() {
 							updateFilters({ year: value || "", term: value ? "" : filters.term });
 						}}
 					>
-						{yearOptions.map((year, index) => (
-							<SelectItem key={`${year}-${index}`}>{year}</SelectItem>
+						{yearOptions.map((year) => (
+							<SelectItem key={year}>{year}</SelectItem>
 						))}
 					</Select>
 
@@ -386,8 +386,8 @@ export default function CourseCatalogClient() {
 							updateFilters({ academicLevel: value || "" });
 						}}
 					>
-						{facets.academicLevels.map((level, index) => (
-							<SelectItem key={`${level}-${index}`}>{level}</SelectItem>
+					{facets.academicLevels.map((level) => (
+						<SelectItem key={level}>{level}</SelectItem>
 						))}
 					</Select>
 

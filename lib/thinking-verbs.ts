@@ -5,7 +5,8 @@
 //
 
 /**
- * Thinking verbs shown as the model generates. We currently have 103 as of v6.0.0.
+ * Thinking verbs shown as the model generates. We currently have 111 as of v6.0.0.
+ * 
  */
 const thinkingVerbs = [
     // Ryan Smith
@@ -37,7 +38,11 @@ const thinkingVerbs = [
 	"ruminating",
 
     // Adithya Kommi
-    "brainstorming", "braining", "1000 IQ", 
+    "brainstorming", "braining", "1000 IQ",
+
+    // Alice Musselman
+    "incorporating", "envisioning", "ideating", "factoring", "making", "Alfieing",
+    "AIing"
 ] as const;
 
 export default thinkingVerbs;

@@ -11,27 +11,27 @@ function parseYear(term: string): number {
 function parseSemesterRank(term: string): number {
 	const normalized = term.toLowerCase();
 
-	if (normalized.includes("fall")) return 4;
-	if (normalized.includes("summer")) return 3;
-	if (normalized.includes("spring")) return 2;
-	if (normalized.includes("winter")) return 1;
+	if (normalized.includes("spring")) return 1;
+	if (normalized.includes("summer")) return 2;
+	if (normalized.includes("fall")) return 3;
+	if (normalized.includes("winter")) return 0;
 
-	return 0;
+	return -1;
 }
 
 function sortTermsDescending(terms: string[]): string[] {
 	return [...terms].sort((left, right) => {
-		const yearDiff = parseYear(right) - parseYear(left);
+		const yearDiff = parseYear(left) - parseYear(right);
 		if (yearDiff !== 0) {
 			return yearDiff;
 		}
 
-		const semesterDiff = parseSemesterRank(right) - parseSemesterRank(left);
+		const semesterDiff = parseSemesterRank(left) - parseSemesterRank(right);
 		if (semesterDiff !== 0) {
 			return semesterDiff;
 		}
 
-		return right.localeCompare(left);
+		return left.localeCompare(right);
 	});
 }
 

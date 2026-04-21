@@ -2184,15 +2184,12 @@ export async function POST(request: NextRequest) {
 		// Parse the structured records separately so we can use them for degree-progress enrichment
 		const transcriptRecords = transcriptText.trim() ? parseStructuredTranscriptRecords(transcriptText) : { completed: [], planned: [], transfer: [], requirements: [], poeSections: [] };
 
-		// Auto-detect courses the student has already pre-registered for the scheduling term.
-		// Merge with any user-provided codes (union, no duplicates).
+		// Detect courses the student has already pre-registered for the scheduling term.
+		// These are kept as backup suggestions — they are NOT auto-promoted to User's Choice (primary).
 		const pdfPreRegisteredCodes = getPreRegisteredCourseCodes(transcriptRecords.planned, term);
 		const normalizedPdfCodes = pdfPreRegisteredCodes.map((c) => c.trim().toUpperCase().replace(/\s+/g, "-"));
 		// Track which were auto-detected (vs. manually entered) for the response notice
 		const autoDetectedCodes = normalizedPdfCodes.filter((c) => !userChosenCourseCodes.includes(c));
-		if (autoDetectedCodes.length > 0) {
-			userChosenCourseCodes = Array.from(new Set([...userChosenCourseCodes, ...autoDetectedCodes]));
-		}
 
 		const completedAliases = new Set(transcriptEvidence.completedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
 		const plannedAliases = new Set(transcriptEvidence.plannedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
@@ -2200,6 +2197,12 @@ export async function POST(request: NextRequest) {
 		const excludedAliases = new Set(transcriptEvidence.excludedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
 		// Exclude user-chosen courses from model recommendations (the model fills AROUND them)
 		for (const code of userChosenCourseCodes) {
+			for (const alias of getCourseCodeAliases(code)) {
+				excludedAliases.add(alias);
+			}
+		}
+		// Also exclude auto-detected pre-registered courses so the model doesn't double-suggest them
+		for (const code of autoDetectedCodes) {
 			for (const alias of getCourseCodeAliases(code)) {
 				excludedAliases.add(alias);
 			}
@@ -2354,6 +2357,21 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
+		// Resolve auto-detected pre-registered courses as backup suggestions (primary: false)
+		const autoDetectedScheduleResults: ScheduleCourseResult[] = [];
+		if (autoDetectedCodes.length > 0) {
+			for (const code of autoDetectedCodes) {
+				const normalizedCode = normalizeCourseCode(code);
+				const found = availableCoursesWithResolvedInstructors.find(
+					(c) => normalizeCourseCode(c.course_code) === normalizedCode ||
+						getCourseCodeAliases(c.course_code).some((a) => normalizeCourseCode(a) === normalizedCode),
+				);
+				if (found) {
+					autoDetectedScheduleResults.push(toScheduleCourse(found, false, term, preferOpenSections));
+				}
+			}
+		}
+
 		// Build context summary for the model about pre-registered courses
 		const userChosenContextLines: string[] = [];
 		if (userChosenScheduleResults.length > 0) {
@@ -2457,10 +2475,17 @@ export async function POST(request: NextRequest) {
 		const userChosenNormalizedCodes = new Set(
 			userChosenScheduleResults.map((c) => normalizeCourseCode(c.courseCode)),
 		);
+		const mergedModelCourses = filteredModelCourses.filter(
+			(c) => !userChosenNormalizedCodes.has(normalizeCourseCode(c.courseCode)),
+		);
+		const mergedModelNormalizedCodes = new Set(mergedModelCourses.map((c) => normalizeCourseCode(c.courseCode)));
 		const mergedCourses: ScheduleCourseResult[] = [
 			...userChosenScheduleResults,
-			...filteredModelCourses.filter(
-				(c) => !userChosenNormalizedCodes.has(normalizeCourseCode(c.courseCode)),
+			...mergedModelCourses,
+			// Auto-detected pre-registered courses appear as backup suggestions (deduplicated)
+			...autoDetectedScheduleResults.filter(
+				(c) => !userChosenNormalizedCodes.has(normalizeCourseCode(c.courseCode)) &&
+					!mergedModelNormalizedCodes.has(normalizeCourseCode(c.courseCode)),
 			),
 		];
 
