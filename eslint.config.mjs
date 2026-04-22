@@ -1,3 +1,9 @@
+//
+// Filename: eslint.config.mjs
+// Description: ESLint flat config for AlfieAI
+// Copyright (c) 2026 Ryan Smith <rysmith2113@gmail.com>
+//
+
 import path from "path";
 import { fileURLToPath } from "url";
 
