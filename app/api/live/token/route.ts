@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
 	const now = Date.now();
 	const expireTime = new Date(now + 30 * 60 * 1000).toISOString();
-	const newSessionExpireTime = new Date(now + 90 * 1000).toISOString();
+	const newSessionExpireTime = new Date(now + 5 * 60 * 1000).toISOString();
 
 	try {
 		const ai = new GoogleGenAI({
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
 		const token = await ai.authTokens.create({
 			config: {
-				uses: 3,
+				uses: 10,
 				expireTime,
 				newSessionExpireTime,
 				liveConnectConstraints: {

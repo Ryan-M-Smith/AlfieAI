@@ -4,13 +4,6 @@ import { GoogleGenAI, Modality, type LiveServerMessage, type Session } from "@go
 import { useEffect, useRef, useState } from "react";
 import { FaMicrophone } from "react-icons/fa";
 
-const DEFAULT_MODEL = "gemini-live-2.5-flash-preview";
-
-const LIVE_MODELS = [
-	"gemini-live-2.5-flash-preview",
-	"gemini-2.0-flash-live-preview-04-09",
-] as const;
-
 const VOICE_CHOICES = [
 	"Orus",
 	"Aoede",
@@ -33,6 +26,9 @@ type LiveTokenResponse = {
 	model: string;
 	expiresAt?: string;
 };
+
+const MAX_RECONNECT_ATTEMPTS = 3;
+const RECONNECT_BASE_MS = 1200;
 
 function averageLevel(bytes: Uint8Array): number {
 	if (bytes.length === 0) {
@@ -104,11 +100,10 @@ export default function LiveVoiceStudio() {
 	const [statusText, setStatusText] = useState("Connect to start a live voice session.");
 	const [errorText, setErrorText] = useState("");
 	const [selectedVoice, setSelectedVoice] = useState<string>("Orus");
-	const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
+	const selectedVoiceRef = useRef(selectedVoice);
 	const [isRecording, setIsRecording] = useState(false);
 	const [userTranscript, setUserTranscript] = useState("");
 	const [assistantTranscript, setAssistantTranscript] = useState("");
-	const [textPrompt, setTextPrompt] = useState("");
 
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const animationFrameRef = useRef<number | null>(null);
@@ -127,10 +122,19 @@ export default function LiveVoiceStudio() {
 	const outputAnalyserRef = useRef<AnalyserNode | null>(null);
 	const nextStartTimeRef = useRef(0);
 	const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+	const manualDisconnectRef = useRef(false);
+	const shouldResumeRecordingRef = useRef(false);
+	const reconnectAttemptsRef = useRef(0);
+	const reconnectTimerRef = useRef<number | null>(null);
+	const connectingRef = useRef(false);
 
 	useEffect(() => {
 		isRecordingRef.current = isRecording;
 	}, [isRecording]);
+
+	useEffect(() => {
+		selectedVoiceRef.current = selectedVoice;
+	}, [selectedVoice]);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -179,17 +183,17 @@ export default function LiveVoiceStudio() {
 			const t = time * 0.001;
 
 			const bg = context.createLinearGradient(0, 0, width, height);
-			bg.addColorStop(0, "#06141f");
-			bg.addColorStop(0.5, "#0a2130");
-			bg.addColorStop(1, "#1a1110");
+			bg.addColorStop(0, "#180608");
+			bg.addColorStop(0.45, "#22080c");
+			bg.addColorStop(1, "#0f0305");
 			context.fillStyle = bg;
 			context.fillRect(0, 0, width, height);
 
 			const glowRadius = Math.min(width, height) * (0.2 + outputLevel * 0.12);
 			const glow = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius * 2.3);
-			glow.addColorStop(0, `rgba(57, 216, 255, ${0.24 + outputLevel * 0.35})`);
-			glow.addColorStop(0.55, `rgba(255, 125, 53, ${0.2 + inputLevel * 0.25})`);
-			glow.addColorStop(1, "rgba(7, 14, 19, 0)");
+			glow.addColorStop(0, `rgba(245, 64, 79, ${0.28 + outputLevel * 0.35})`);
+			glow.addColorStop(0.55, `rgba(255, 120, 60, ${0.18 + inputLevel * 0.22})`);
+			glow.addColorStop(1, "rgba(20, 6, 8, 0)");
 			context.fillStyle = glow;
 			context.fillRect(0, 0, width, height);
 
@@ -198,7 +202,7 @@ export default function LiveVoiceStudio() {
 				const ringRadius = glowRadius * (0.45 + ring * 0.4 + inputLevel * 0.2);
 				context.beginPath();
 				context.lineWidth = Math.max(1, dpr * (1.25 - ring * 0.18));
-				context.strokeStyle = `rgba(${ring % 2 === 0 ? "94, 220, 255" : "255, 161, 110"}, ${0.32 - ring * 0.06})`;
+				context.strokeStyle = `rgba(${ring % 2 === 0 ? "255, 100, 120" : "255, 150, 95"}, ${0.3 - ring * 0.05})`;
 				for (let i = 0; i <= 160; i += 1) {
 					const p = (i / 160) * Math.PI * 2;
 					const wobble = 1 + Math.sin(p * (3 + ring) + phase) * (0.04 + outputLevel * 0.06);
@@ -224,7 +228,7 @@ export default function LiveVoiceStudio() {
 					context.lineTo(x, y);
 				}
 			}
-			context.strokeStyle = "rgba(122, 240, 255, 0.45)";
+			context.strokeStyle = "rgba(255, 132, 146, 0.48)";
 			context.lineWidth = 2 * dpr;
 			context.stroke();
 
@@ -238,7 +242,7 @@ export default function LiveVoiceStudio() {
 					context.lineTo(x, y);
 				}
 			}
-			context.strokeStyle = "rgba(255, 173, 128, 0.38)";
+			context.strokeStyle = "rgba(255, 173, 112, 0.42)";
 			context.lineWidth = 1.5 * dpr;
 			context.stroke();
 
@@ -282,6 +286,13 @@ export default function LiveVoiceStudio() {
 
 		if (outputContextRef.current.state === "suspended") {
 			await outputContextRef.current.resume();
+		}
+	}
+
+	function clearReconnectTimer(): void {
+		if (reconnectTimerRef.current) {
+			window.clearTimeout(reconnectTimerRef.current);
+			reconnectTimerRef.current = null;
 		}
 	}
 
@@ -390,9 +401,150 @@ export default function LiveVoiceStudio() {
 		}
 	}
 
+	async function connectSession(options?: { autoStartRecording?: boolean }): Promise<boolean> {
+		if (connectionState === "connected" && sessionRef.current) {
+			return true;
+		}
+
+		if (connectingRef.current) {
+			return false;
+		}
+
+		connectingRef.current = true;
+		manualDisconnectRef.current = false;
+		clearReconnectTimer();
+		setConnectionState("connecting");
+		setErrorText("");
+		setStatusText("Requesting a short-lived Gemini Live token...");
+
+		try {
+			await ensureAudioGraph();
+
+			const tokenResponse = await fetch("/api/live/token", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+			});
+
+			if (!tokenResponse.ok) {
+				const payload = (await tokenResponse.json().catch(() => null)) as { error?: string } | null;
+				throw new Error(payload?.error || "Could not mint a Gemini Live token.");
+			}
+
+			const payload = (await tokenResponse.json()) as LiveTokenResponse;
+			if (!payload.token) {
+				throw new Error("Live token is missing from server response.");
+			}
+
+			const liveClient = new GoogleGenAI({
+				apiKey: payload.token,
+				apiVersion: "v1alpha",
+			});
+
+			const connectWithVoice = async (voiceName: string) =>
+				liveClient.live.connect({
+					model: payload.model,
+					callbacks: {
+						onopen: () => {
+							reconnectAttemptsRef.current = 0;
+							setConnectionState("connected");
+							setStatusText("Connected. Ready for voice.");
+							setErrorText("");
+						},
+						onmessage: (message) => {
+							handleLiveMessage(message);
+						},
+						onerror: (event) => {
+							setErrorText(event.message || "Live socket error.");
+							setStatusText("Socket issue detected. Waiting for reconnect...");
+						},
+						onclose: () => {
+							const wasManual = manualDisconnectRef.current;
+							sessionRef.current = null;
+							stopRecording();
+							clearPlaybackQueue();
+
+							if (wasManual) {
+								manualDisconnectRef.current = false;
+								setConnectionState("idle");
+								setStatusText("Disconnected.");
+								return;
+							}
+
+							if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+								setConnectionState("error");
+								setStatusText("Connection lost.");
+								setErrorText("Could not reconnect. Please press Connect.");
+								return;
+							}
+
+							reconnectAttemptsRef.current += 1;
+							const delay = RECONNECT_BASE_MS * reconnectAttemptsRef.current;
+							setConnectionState("connecting");
+							setStatusText(`Reconnecting (${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})...`);
+
+							clearReconnectTimer();
+							reconnectTimerRef.current = window.setTimeout(() => {
+								void connectSession({ autoStartRecording: shouldResumeRecordingRef.current });
+							}, delay);
+						},
+					},
+					config: {
+						responseModalities: [Modality.AUDIO],
+						speechConfig: {
+							voiceConfig: {
+								prebuiltVoiceConfig: {
+									voiceName,
+								},
+							},
+						},
+						tools: [{ googleSearch: {} }],
+						systemInstruction: {
+							parts: [{ text: LIVE_SYSTEM_PROMPT }],
+						},
+					},
+				});
+
+			let liveSession: Session;
+			try {
+				liveSession = await connectWithVoice(selectedVoiceRef.current);
+			} catch {
+				if (selectedVoiceRef.current !== "Orus") {
+					setStatusText("Selected voice unavailable. Retrying with Orus...");
+					liveSession = await connectWithVoice("Orus");
+					setSelectedVoice("Orus");
+				} else {
+					throw new Error("Failed to connect to Gemini Live.");
+				}
+			}
+
+			sessionRef.current = liveSession;
+
+			if (options?.autoStartRecording) {
+				void startRecording();
+			}
+
+			return true;
+		} catch (error) {
+			setConnectionState("error");
+			setStatusText("Unable to connect.");
+			setErrorText(error instanceof Error ? error.message : "Unknown connection error.");
+			return false;
+		} finally {
+			connectingRef.current = false;
+		}
+	}
+
 	async function startRecording(): Promise<void> {
+		shouldResumeRecordingRef.current = true;
+
 		if (!sessionRef.current || connectionState !== "connected") {
-			setErrorText("Connect to Gemini Live before enabling the microphone.");
+			const connected = await connectSession({ autoStartRecording: false });
+			if (!connected) {
+				return;
+			}
+		}
+
+		if (isRecordingRef.current) {
 			return;
 		}
 
@@ -440,108 +592,15 @@ export default function LiveVoiceStudio() {
 		} catch (error) {
 			setErrorText(error instanceof Error ? error.message : "Could not start microphone capture.");
 			setStatusText("Microphone unavailable.");
+			shouldResumeRecordingRef.current = false;
 			stopRecording();
 		}
 	}
 
-	async function connectSession(): Promise<void> {
-		if (connectionState === "connecting") {
-			return;
-		}
-
-		setConnectionState("connecting");
-		setErrorText("");
-		setStatusText("Requesting a short-lived Gemini Live token...");
-		setAssistantTranscript("");
-		setUserTranscript("");
-
-		try {
-			await ensureAudioGraph();
-
-			const tokenResponse = await fetch("/api/live/token", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ model: selectedModel }),
-			});
-
-			if (!tokenResponse.ok) {
-				const payload = (await tokenResponse.json().catch(() => null)) as { error?: string } | null;
-				throw new Error(payload?.error || "Could not mint a Gemini Live token.");
-			}
-
-			const payload = (await tokenResponse.json()) as LiveTokenResponse;
-			if (!payload.token) {
-				throw new Error("Live token is missing from server response.");
-			}
-
-			const liveClient = new GoogleGenAI({
-				apiKey: payload.token,
-				apiVersion: "v1alpha",
-			});
-
-			const connectWithVoice = async (voiceName: string) =>
-				liveClient.live.connect({
-					model: payload.model,
-					callbacks: {
-						onopen: () => {
-							setConnectionState("connected");
-							setStatusText("Connected. Press Start Mic to talk.");
-							setErrorText("");
-						},
-						onmessage: (message) => {
-							handleLiveMessage(message);
-						},
-						onerror: (event) => {
-							setConnectionState("error");
-							setErrorText(event.message || "Live socket error.");
-							setStatusText("Live connection encountered an error.");
-						},
-						onclose: () => {
-							setConnectionState((prev) => (prev === "error" ? "error" : "idle"));
-							setStatusText("Disconnected.");
-							stopRecording();
-							clearPlaybackQueue();
-						},
-					},
-					config: {
-						responseModalities: [Modality.AUDIO],
-						speechConfig: {
-							voiceConfig: {
-								prebuiltVoiceConfig: {
-									voiceName,
-								},
-							},
-						},
-						tools: [{ googleSearch: {} }],
-						systemInstruction: {
-							parts: [{ text: LIVE_SYSTEM_PROMPT }],
-						},
-					},
-				});
-
-			let liveSession: Session;
-			try {
-				liveSession = await connectWithVoice(selectedVoice);
-			} catch (primaryError) {
-				if (selectedVoice !== "Orus") {
-					setStatusText("Retrying with voice Orus...");
-					liveSession = await connectWithVoice("Orus");
-					setSelectedVoice("Orus");
-				} else {
-					throw primaryError;
-				}
-			}
-
-			sessionRef.current = liveSession;
-			setSelectedModel(payload.model);
-		} catch (error) {
-			setConnectionState("error");
-			setStatusText("Unable to connect.");
-			setErrorText(error instanceof Error ? error.message : "Unknown connection error.");
-		}
-	}
-
 	function disconnectSession(): void {
+		clearReconnectTimer();
+		manualDisconnectRef.current = true;
+		shouldResumeRecordingRef.current = false;
 		stopRecording();
 		clearPlaybackQueue();
 
@@ -558,24 +617,9 @@ export default function LiveVoiceStudio() {
 		setStatusText("Disconnected.");
 	}
 
-	function sendTextPrompt(event: React.FormEvent<HTMLFormElement>): void {
-		event.preventDefault();
-
-		const trimmed = textPrompt.trim();
-		if (!trimmed || !sessionRef.current || connectionState !== "connected") {
-			return;
-		}
-
-		sessionRef.current.sendClientContent({
-			turns: trimmed,
-			turnComplete: true,
-		});
-		setTextPrompt("");
-		setStatusText("Text sent to the live session.");
-	}
-
 	useEffect(() => {
 		return () => {
+			clearReconnectTimer();
 			disconnectSession();
 			if (inputContextRef.current && inputContextRef.current.state !== "closed") {
 				void inputContextRef.current.close();
@@ -588,28 +632,29 @@ export default function LiveVoiceStudio() {
 	}, []);
 
 	const isConnected = connectionState === "connected";
+	const isConnecting = connectionState === "connecting";
 	const connectionBadgeClass =
 		connectionState === "connected"
-			? "border-emerald-400/50 text-emerald-200 bg-emerald-500/15"
+			? "border-red-300/70 text-red-100 bg-red-500/25"
 			: connectionState === "connecting"
-				? "border-cyan-400/50 text-cyan-100 bg-cyan-500/15"
+				? "border-amber-300/70 text-amber-100 bg-amber-500/25"
 				: connectionState === "error"
-					? "border-red-400/50 text-red-100 bg-red-500/20"
+					? "border-red-500/80 text-red-100 bg-red-900/45"
 					: "border-zinc-500/50 text-zinc-200 bg-zinc-800/50";
 
 	return (
-		<div className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-28 sm:px-8 sm:pb-14 sm:pt-32">
+		<div className="relative mx-auto w-full max-w-5xl px-4 pb-10 pt-28 sm:px-8 sm:pb-14 sm:pt-32">
 			<div className="pointer-events-none absolute inset-0 overflow-hidden">
-				<div className="absolute -top-16 left-[8%] h-56 w-56 rounded-full bg-cyan-500/12 blur-3xl" />
-				<div className="absolute top-[35%] right-[12%] h-72 w-72 rounded-full bg-orange-400/10 blur-3xl" />
-				<div className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-rose-500/10 blur-3xl" />
+				<div className="absolute -top-16 left-[8%] h-56 w-56 rounded-full bg-red-500/20 blur-3xl" />
+				<div className="absolute top-[35%] right-[12%] h-72 w-72 rounded-full bg-orange-500/15 blur-3xl" />
+				<div className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-red-900/30 blur-3xl" />
 			</div>
 
-			<div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-				<section className="relative overflow-hidden rounded-3xl border border-white/15 bg-black/35 p-4 backdrop-blur-xl sm:p-6">
+			<div className="relative grid gap-6 lg:grid-cols-[1.35fr_0.95fr]">
+				<section className="relative overflow-hidden rounded-3xl border border-red-300/20 bg-black/45 p-4 backdrop-blur-xl sm:p-6">
 					<div className="mb-4 flex items-center justify-between gap-3">
 						<h1 className="font-racing text-2xl tracking-wide text-white sm:text-3xl">
-							AlfieAI Live Studio
+							Live Voice Visualizer
 						</h1>
 						<span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest ${connectionBadgeClass}`}>
 							{connectionState}
@@ -617,58 +662,42 @@ export default function LiveVoiceStudio() {
 					</div>
 
 					<p className="mb-4 text-sm text-zinc-200 sm:text-base">
-						React-native Gemini Live experience with realtime voice, animated motion canvas, and configurable voice output.
+						Clean live controls with realtime visual signal and transcription.
 					</p>
 
-					<div className="relative h-[330px] overflow-hidden rounded-2xl border border-white/10 bg-slate-950/70 sm:h-[430px]">
+					<div className="relative h-84 overflow-hidden rounded-2xl border border-red-300/20 bg-[#180709]/80 sm:h-112">
 						<canvas ref={canvasRef} className="h-full w-full" />
-						<div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-xl border border-white/10 bg-black/40 px-4 py-3 backdrop-blur">
-							<p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan-200/90">Live Signal</p>
+						<div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-xl border border-red-300/20 bg-black/45 px-4 py-3 backdrop-blur">
+							<p className="font-mono text-xs uppercase tracking-[0.24em] text-red-200/90">Live Signal</p>
 							<p className="mt-1 text-sm text-zinc-100">{statusText}</p>
 							{errorText ? <p className="mt-1 text-xs text-red-200">{errorText}</p> : null}
 						</div>
 					</div>
 
 					<div className="mt-4 grid gap-3 sm:grid-cols-2">
-						<div className="rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-3">
-							<p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-cyan-100/80">You said</p>
-							<p className="min-h-[48px] text-sm text-cyan-50/95">{userTranscript || "Listening for speech..."}</p>
+						<div className="rounded-2xl border border-red-300/20 bg-red-950/35 p-3">
+							<p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-red-100/85">You Said</p>
+							<p className="min-h-12 text-sm text-red-50/95">{userTranscript || "Listening for speech..."}</p>
 						</div>
-						<div className="rounded-2xl border border-orange-300/20 bg-orange-500/10 p-3">
-							<p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-orange-100/85">Alfie says</p>
-							<p className="min-h-[48px] text-sm text-orange-50/95">{assistantTranscript || "Alfie’s response appears here."}</p>
+						<div className="rounded-2xl border border-orange-300/20 bg-orange-950/30 p-3">
+							<p className="mb-1 text-[11px] uppercase tracking-[0.2em] text-orange-100/85">Alfie Says</p>
+							<p className="min-h-12 text-sm text-orange-50/95">{assistantTranscript || "Alfie response appears here."}</p>
 						</div>
 					</div>
 				</section>
 
-				<section className="rounded-3xl border border-white/15 bg-zinc-950/60 p-4 backdrop-blur-xl sm:p-6">
-					<h2 className="font-big text-xl text-white">Session Controls</h2>
-					<p className="mt-1 text-sm text-zinc-300">Use Connect first, then Start Mic for realtime voice turn-taking.</p>
+				<section className="rounded-3xl border border-red-300/20 bg-zinc-950/65 p-4 backdrop-blur-xl sm:p-6">
+					<h2 className="font-big text-xl text-white">Controls</h2>
+					<p className="mt-1 text-sm text-zinc-300">Connect once, then use Start, Pause, and Stop.</p>
 
 					<div className="mt-5 space-y-4">
 						<label className="block">
-							<span className="mb-1 block text-xs uppercase tracking-[0.18em] text-zinc-300">Live Model</span>
-							<select
-								className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-300"
-								value={selectedModel}
-								onChange={(event) => setSelectedModel(event.target.value)}
-								disabled={connectionState === "connecting" || isConnected}
-							>
-								{LIVE_MODELS.map((model) => (
-									<option key={model} value={model}>
-										{model}
-									</option>
-								))}
-							</select>
-						</label>
-
-						<label className="block">
 							<span className="mb-1 block text-xs uppercase tracking-[0.18em] text-zinc-300">Voice</span>
 							<select
-								className="w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-sm text-white outline-none transition focus:border-orange-300"
+								className="w-full rounded-xl border border-red-300/25 bg-black/50 px-3 py-2 text-sm text-white outline-none transition focus:border-red-300"
 								value={selectedVoice}
 								onChange={(event) => setSelectedVoice(event.target.value)}
-								disabled={connectionState === "connecting" || isConnected}
+								disabled={isConnecting || isRecording}
 							>
 								{VOICE_CHOICES.map((voice) => (
 									<option key={voice} value={voice}>
@@ -679,60 +708,67 @@ export default function LiveVoiceStudio() {
 						</label>
 					</div>
 
-					<div className="mt-5 grid gap-3">
+					<div className="mt-5 grid gap-3 sm:grid-cols-2">
 						<button
 							type="button"
 							onClick={() => {
-								if (isConnected || connectionState === "connecting") {
+								if (isConnected) {
 									disconnectSession();
 									return;
 								}
-								void connectSession();
+								setAssistantTranscript("");
+								setUserTranscript("");
+								void connectSession({ autoStartRecording: false });
 							}}
-							className="rounded-xl border border-cyan-300/45 bg-cyan-500/15 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-55"
-							disabled={connectionState === "connecting"}
+							className="rounded-xl border border-red-300/45 bg-red-600/20 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-red-100 transition hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-55"
+							disabled={isConnecting}
 						>
-							{isConnected || connectionState === "connecting" ? "Disconnect" : "Connect"}
+							{isConnected ? "Disconnect" : isConnecting ? "Connecting" : "Connect"}
 						</button>
 
 						<button
 							type="button"
 							onClick={() => {
-								if (isRecording) {
-									stopRecording();
-									setStatusText("Mic paused.");
-									return;
-								}
 								void startRecording();
 							}}
-							className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-300/45 bg-orange-500/15 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-orange-50 transition hover:bg-orange-500/25 disabled:cursor-not-allowed disabled:opacity-55"
-							disabled={!isConnected}
+							className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-300/45 bg-orange-600/20 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-orange-50 transition hover:bg-orange-500/30 disabled:cursor-not-allowed disabled:opacity-55"
+							disabled={isRecording || isConnecting}
 						>
 							<FaMicrophone />
-							{isRecording ? "Stop Mic" : "Start Mic"}
+							Start
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								shouldResumeRecordingRef.current = false;
+								stopRecording();
+								setStatusText("Paused.");
+							}}
+							className="rounded-xl border border-amber-300/40 bg-amber-600/20 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-amber-50 transition hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-55"
+							disabled={!isConnected || !isRecording}
+						>
+							Pause
+						</button>
+
+						<button
+							type="button"
+							onClick={() => {
+								disconnectSession();
+								setAssistantTranscript("");
+								setUserTranscript("");
+								setErrorText("");
+								setStatusText("Stopped.");
+							}}
+							className="rounded-xl border border-zinc-300/30 bg-zinc-700/25 px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-zinc-100 transition hover:bg-zinc-600/35 disabled:cursor-not-allowed disabled:opacity-55"
+							disabled={!isConnected && !isConnecting && !isRecording}
+						>
+							Stop
 						</button>
 					</div>
 
-					<form className="mt-5" onSubmit={sendTextPrompt}>
-						<label className="mb-1 block text-xs uppercase tracking-[0.18em] text-zinc-300">Optional Text Prompt</label>
-						<textarea
-							className="min-h-24 w-full resize-y rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-300"
-							placeholder="Ask Alfie something without using the mic..."
-							value={textPrompt}
-							onChange={(event) => setTextPrompt(event.target.value)}
-							disabled={!isConnected}
-						/>
-						<button
-							type="submit"
-							className="mt-3 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-55"
-							disabled={!isConnected || !textPrompt.trim()}
-						>
-							Send Prompt
-						</button>
-					</form>
-
 					<p className="mt-5 text-xs leading-relaxed text-zinc-400">
-						Voice availability can vary by API/model version. If a selected voice is unavailable, this UI automatically retries with Orus.
+						If a connection drops, AlfieAI will attempt to reconnect automatically. If a selected voice is unavailable, it retries with Orus.
 					</p>
 				</section>
 			</div>
