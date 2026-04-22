@@ -70,8 +70,8 @@ const schedulingModeOptions: Array<{ key: SchedulingMode; label: string; descrip
 const creditLoadOptions: Array<{ key: CreditLoadProfile; label: string; description: string }> = [
 	{ key: "part-time", label: "Part-time", description: "Below 12 credits" },
 	{ key: "light", label: "Light", description: "12-13 credits" },
-	{ key: "moderate", label: "Moderate", description: "14-17 credits" },
-	{ key: "heavy", label: "Heavy", description: "18+ credits" },
+	{ key: "moderate", label: "Moderate", description: "14-16 credits" },
+	{ key: "heavy", label: "Heavy", description: "17+ credits" },
 	{ key: "custom", label: "Custom", description: "Pick your own target" },
 ];
 
@@ -200,7 +200,7 @@ export default function ScheduleBuilder() {
 			return 15;
 		}
 		if (form.creditLoadProfile === "heavy") {
-			return 18;
+			return 17;
 		}
 
 		const parsed = Number(form.customTargetCredits.trim());
@@ -218,7 +218,7 @@ export default function ScheduleBuilder() {
 			setLoadingOptions(true);
 
 			try {
-				const response = await fetch("/api/courses/planner-options");
+				const response = await fetch("/api/courses/planner-options", { cache: "no-store" });
 				if (!response.ok) {
 					throw new Error("Failed to load planner options.");
 				}
@@ -500,6 +500,9 @@ export default function ScheduleBuilder() {
 			if (resolvedPrimaryPoes.length === 0) {
 				throw new Error("Please add at least one primary POE.");
 			}
+			if (!degreeProgressFile) {
+				throw new Error("Please upload your Self-Service Degree Progress PDF.");
+			}
 			if (form.creditLoadProfile === "custom" && !form.customTargetCredits.trim()) {
 				throw new Error("Please enter a custom credit target.");
 			}
@@ -514,9 +517,6 @@ export default function ScheduleBuilder() {
 			formData.append("guidance", form.guidance.trim());
 			formData.append("openSeatsOnly", String(form.openSeatsOnly));
 			formData.append("schedulingMode", form.schedulingMode);
-			if (form.useUserChosenMode) {
-				formData.append("userChosenCourses", "true");
-			}
 
 			if (degreeProgressFile) {
 				formData.append("degreeProgressFile", degreeProgressFile);
@@ -769,7 +769,7 @@ export default function ScheduleBuilder() {
 										/>
 									</div>
 								) : (
-									<span className="text-sm text-default-500 dark:text-default-600">No file selected · PDF only</span>
+									<span className="text-sm text-danger-600 dark:text-danger-400">PDF required · no file selected</span>
 								)}
 							</div>
 						</div>
@@ -913,13 +913,13 @@ export default function ScheduleBuilder() {
 										{form.alwaysIncludeCourses.map((code) => (
 											<span
 												key={code}
-												className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 px-3 py-1 text-xs font-medium text-secondary-800 dark:bg-secondary-900/40 dark:text-secondary-200"
+												className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/70 bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800 dark:border-violet-400/35 dark:bg-violet-500/20 dark:text-violet-200"
 											>
 												{code}
 												<button
 													type="button"
 													aria-label={`Remove ${code}`}
-													className="ml-0.5 rounded-full hover:text-danger"
+													className="ml-0.5 rounded-full text-violet-700 transition-colors hover:text-danger dark:text-violet-300"
 													onClick={() => removeAlwaysIncludeCourse(code)}
 												>
 													<LuX size={11} />
@@ -999,7 +999,7 @@ export default function ScheduleBuilder() {
 							size="md"
 							onPress={() => void generateSchedule()}
 							isLoading={loadingPlan}
-							isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0}
+							isDisabled={!form.term.trim() || resolvedPrimaryPoes.length === 0 || !degreeProgressFile}
 						>
 							Generate schedule
 						</Button>
@@ -1015,22 +1015,51 @@ export default function ScheduleBuilder() {
 				<ModalContent>
 					{(onClose) => (
 						<>
-							<ModalHeader>Download Self-Service Degree Progress</ModalHeader>
-							<ModalBody className="flex flex-col gap-3">
-								<ol className="list-decimal text-sm text-default-700 dark:text-default-200">
+							<ModalHeader>Download Self-Service Degree Progress PDF</ModalHeader>
+							<ModalBody className="flex flex-col gap-4 px-1 sm:px-2 pb-1">
+								<ol className="list-decimal pl-6 pr-1 text-sm leading-relaxed text-foreground marker:text-default-500 space-y-3">
 									<li>
-										Log onto self service (
-										<Link href="https://selfservice.juniata.edu" target="_blank" rel="noreferrer">
+										Go to {" "}
+										<Link className="text-[1em] font-semibold underline underline-offset-2" href="https://selfservice.juniata.edu" target="_blank" rel="noreferrer">
 											selfservice.juniata.edu
 										</Link>
-										).
+										.
 									</li>
-									<li>Open the main menu.</li>
-									<li>Go to Academics.</li>
-									<li>Open Degree Progress.</li>
-									<li>Print or save the page as a PDF, then upload that file here.</li>
+									<li>Click on Student Planning.</li>
+									<li>Click on Go to My Progress.</li>
+									<li>
+										Click Expand All next to Requirements.
+										<figure className="mt-2 rounded-xl border border-default-200 bg-default-50/70 p-2 dark:border-default-700 dark:bg-zinc-900/60">
+											<img
+												src="/images/selfservice/step4-expand-all.png"
+												alt="Example of the Expand All button next to Requirements in Self-Service"
+												className="mx-auto h-auto max-h-40 w-auto max-w-full rounded-lg border border-default-200 dark:border-default-700"
+												onError={(event) => {
+													const image = event.currentTarget as HTMLImageElement;
+													image.onerror = null;
+													image.src = "/images/selfservice/step4-expand-all-fallback.svg";
+												}}
+											/>
+										</figure>
+									</li>
+									<li>
+										Click Print.
+										<figure className="mt-2 rounded-xl border border-default-200 bg-default-50/70 p-2 dark:border-default-700 dark:bg-zinc-900/60">
+											<img
+												src="/images/selfservice/step5-print.png"
+												alt="Example of the Print button in Self-Service"
+												className="mx-auto h-auto max-h-40 w-auto max-w-full rounded-lg border border-default-200 dark:border-default-700"
+												onError={(event) => {
+													const image = event.currentTarget as HTMLImageElement;
+													image.onerror = null;
+													image.src = "/images/selfservice/step5-print-fallback.svg";
+												}}
+											/>
+										</figure>
+									</li>
+									<li>Save the result as a PDF, then upload that PDF here.</li>
 								</ol>
-								<div className="rounded-xl border border-warning-200 bg-warning-50 text-sm text-warning-900 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">
+								<div className="rounded-xl border border-amber-300/70 bg-amber-50/70 p-3 text-sm leading-relaxed text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200">
 									<strong>Note:</strong> Degree Progress PDF parsing helps suggestions, but advisor and registrar guidance should still be treated as final.
 								</div>
 							</ModalBody>

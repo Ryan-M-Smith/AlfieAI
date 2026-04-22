@@ -55,9 +55,18 @@ export async function GET() {
 		warnings.push("Could not load terms from the database.");
 	}
 
-	return NextResponse.json({
-		terms,
-		poes: AVAILABLE_POES,
-		warnings,
-	});
+	return NextResponse.json(
+		{
+			terms,
+			poes: AVAILABLE_POES,
+			warnings,
+		},
+		{
+			headers: {
+				"Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+				Pragma: "no-cache",
+				Expires: "0",
+			},
+		}
+	);
 }

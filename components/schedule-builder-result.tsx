@@ -590,7 +590,7 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 
 					page += 1;
 				}
-				while (page <= totalPages && page <= 20);
+				while (page <= totalPages);
 
 				// Discard result if a newer schedule was generated while loading
 				if (catalogGenRef.current === gen) {
@@ -635,6 +635,20 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 
 			return [...previous, { ...course, primary: asPrimary }];
 		});
+	}
+
+	function removeCourseFromCalendar(targetCourse: ScheduleCourseResult) {
+		const targetKey = getCourseInstanceKey(targetCourse);
+		setEditableCourses((previous) => previous.map((course) => {
+			if (getCourseInstanceKey(course) !== targetKey) {
+				return course;
+			}
+
+			return {
+				...course,
+				primary: false,
+			};
+		}));
 	}
 
 	async function removeCourseFromSchedule(targetCourse: ScheduleCourseResult) {
@@ -979,9 +993,9 @@ export default function ScheduleBuilderResult({ result, loading, error, onBack }
 																	{showMeeting ? <p className="mt-1 text-[10px] leading-snug text-white/75">{event.course.section.meetings[0] || "TBA"}</p> : null}
 																</button>
 																<button
-																	aria-label={`Remove ${event.course.courseCode}`}
+																	aria-label={`Remove ${event.course.courseCode} from calendar`}
 																	className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/30 text-white opacity-0 transition hover:bg-black/55 group-hover:opacity-100"
-																	onClick={(e) => { e.stopPropagation(); void removeCourseFromSchedule(event.course); }}
+																	onClick={(e) => { e.stopPropagation(); removeCourseFromCalendar(event.course); }}
 																	type="button"
 																>
 																	<FiX size={11} />

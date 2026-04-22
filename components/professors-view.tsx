@@ -58,6 +58,16 @@ export default function ProfessorsView() {
 	const hasMorePages = page < totalPages;
 
 	useEffect(() => {
+		const nextSearch = query.trim();
+		const timeout = setTimeout(() => {
+			setPage(1);
+			setSearch(nextSearch);
+		}, 250);
+
+		return () => clearTimeout(timeout);
+	}, [query]);
+
+	useEffect(() => {
 		const controller = new AbortController();
 
 		async function load() {
@@ -150,12 +160,6 @@ export default function ProfessorsView() {
 							value={query}
 							onValueChange={setQuery}
 							placeholder="Search professors by name or department"
-							onKeyDown={(event) => {
-								if (event.key === "Enter") {
-									setPage(1);
-									setSearch(query.trim());
-								}
-							}}
 						/>
 					</div>
 

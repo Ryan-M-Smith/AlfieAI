@@ -29,8 +29,8 @@ interface ScheduleInsightsRequest {
 const CREDIT_LOAD_LABELS: Record<CreditLoadProfile, string> = {
 	"part-time": "Part-time (<12 credits)",
 	light: "Light (12-13 credits)",
-	moderate: "Moderate (14-17 credits)",
-	heavy: "Heavy (18+ credits)",
+	moderate: "Moderate (14-16 credits)",
+	heavy: "Heavy (17+ credits)",
 	custom: "Custom",
 };
 

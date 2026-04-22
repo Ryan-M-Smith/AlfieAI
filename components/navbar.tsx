@@ -109,7 +109,7 @@ export default function Navbar(): JSX.Element {
 				<div className="flex gap-2 pr-1">
 					{status !== "loading" && (
 						<Button
-							className="font-medium"
+							className="hidden font-medium"
 							radius="full"
 							variant="flat"
 							onPress={async () => {
@@ -143,7 +143,7 @@ export default function Navbar(): JSX.Element {
 					<Link href="/">
 						<Image
 							className="inline-block mr-2 rounded-[10px]"
-							src="/logo.png"
+							src="/images/logo.png"
 							alt="AlfieAI Logo"
 							width={40}
 							height={40}

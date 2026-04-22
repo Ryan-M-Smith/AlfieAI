@@ -30,11 +30,11 @@ export default function Hero(): JSX.Element {
 			<div className="relative">
 				<div className={`
 					flex flex-col justify-center items-center dark:bg-default-50 bg-blue-200
-					dark:text-gray-200 p-6 sm:p-10 rounded-[16px]
+					dark:text-gray-200 p-6 sm:p-10 rounded-4xl
 				`}>
 					<Image
-						className="rounded-[16px]"
-						src="/logo.png"
+						className="rounded-4xl"
+						src="/images/logo.png"
 						alt="AlfieAI logo"
 						width={192}
 						height={192}

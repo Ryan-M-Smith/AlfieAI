@@ -112,8 +112,8 @@ interface ModelScheduleOutput {
 const creditLoadLabels: Record<CreditLoadProfile, string> = {
 	"part-time": "Part-time (<12 credits)",
 	light: "Light (12-13 credits)",
-	moderate: "Moderate (14-17 credits)",
-	heavy: "Heavy (18+ credits)",
+	moderate: "Moderate (14-16 credits)",
+	heavy: "Heavy (17+ credits)",
 	custom: "Custom",
 };
 
@@ -168,7 +168,7 @@ function resolveCreditPreference(formData: FormData): ScheduleCreditPreference {
 				profile,
 				label: creditLoadLabels[profile],
 				minCredits: 14,
-				maxCredits: 17,
+				maxCredits: 16,
 				targetCredits: 15,
 			};
 		
@@ -176,9 +176,9 @@ function resolveCreditPreference(formData: FormData): ScheduleCreditPreference {
 			return {
 				profile,
 				label: creditLoadLabels[profile],
-				minCredits: 18,
+				minCredits: 17,
 				maxCredits: null,
-				targetCredits: 18,
+				targetCredits: 17,
 			};
 		
 		default:
@@ -537,6 +537,19 @@ function getCourseCodeAliases(code: string): string[] {
 	return Array.from(new Set([normalized, base].filter(Boolean)));
 }
 
+function extractCourseCodesFromText(value: string): string[] {
+	if (!value.trim()) {
+		return [];
+	}
+
+	const matches = value.match(/\b[A-Za-z]{2,4}\s*-?\s*\d{3}[A-Za-z]{0,3}\b/g) || [];
+	const normalized = matches
+		.map((token) => normalizeCourseCode(token))
+		.filter((token) => /^([A-Z]{2,4})-(\d{3})([A-Z]{0,3})$/.test(token));
+
+	return Array.from(new Set(normalized));
+}
+
 function normalizeWhitespace(value: string): string {
 	return value.trim().replace(/\s+/g, " ");
 }
@@ -569,6 +582,66 @@ function normalizeNameToken(value: string): string {
 		.toLowerCase()
 		.replace(/[^a-z\s]/g, "")
 		.trim();
+}
+
+function inferFoundationalTopicKey(courseCode: string, title: string): string | null {
+	const normalizedCode = normalizeCourseCode(courseCode);
+	const lowerTitle = normalizeWhitespace(title).toLowerCase();
+	const mathCodeMatch = normalizedCode.match(/^MATH-(\d{3})/);
+	const mathNumber = mathCodeMatch ? Number(mathCodeMatch[1]) : null;
+
+	const isPrecalculus = /^MATH-(0\d{2}|1\d{2})/.test(normalizedCode)
+		&& /\b(pre[-\s]?calculus|college\s+algebra|trigonometry)\b/.test(lowerTitle);
+	if (isPrecalculus) {
+		return "precalculus";
+	}
+
+	const isStatistics = /^STAT-\d{3}/.test(normalizedCode)
+		|| /\b(statistics?|statistical|stats?)\b/.test(lowerTitle);
+	if (isStatistics) {
+		return "statistics";
+	}
+
+	const isCalculusOne = /\bcalculus\b/.test(lowerTitle)
+		&& /(?:\bi\b|\b1\b|\bone\b)/.test(lowerTitle)
+		&& !/(?:\bii\b|\b2\b|\btwo\b)/.test(lowerTitle);
+	if (isCalculusOne) {
+		return "calculus-1";
+	}
+
+	const isAdvancedCalculus = /\bcalculus\b/.test(lowerTitle)
+		&& (/(?:\bii\b|\biii\b|\biv\b|\b2\b|\b3\b|\b4\b|multivariable|vector)/.test(lowerTitle)
+			|| (mathNumber !== null && mathNumber >= 200));
+	if (isAdvancedCalculus) {
+		return "calculus-advanced";
+	}
+
+	const isHigherLevelMath = mathNumber !== null
+		&& mathNumber >= 200
+		&& /\b(linear\s+algebra|differential\s+equations?|real\s+analysis|abstract\s+algebra|proofs?)\b/.test(lowerTitle);
+	if (isHigherLevelMath) {
+		return "advanced-math";
+	}
+
+	return null;
+}
+
+function shouldBlockTopicRecommendation(candidateTopic: string | null, takenTopics: Set<string>): boolean {
+	if (!candidateTopic) {
+		return false;
+	}
+
+	if (takenTopics.has(candidateTopic)) {
+		return true;
+	}
+
+	if (candidateTopic === "precalculus") {
+		return takenTopics.has("calculus-1")
+			|| takenTopics.has("calculus-advanced")
+			|| takenTopics.has("advanced-math");
+	}
+
+	return false;
 }
 
 function buildInstructorLookup(professors: ProfessorNameRecord[]): Map<string, string> {
@@ -1805,6 +1878,7 @@ async function generateModelSchedule(payload: {
 	creditPreference: ScheduleCreditPreference;
 	schedulingMode: SchedulingMode;
 	guidance: string;
+	explicitRequestedCourseCodes: string[];
 	transcriptEvidence: TranscriptEvidence;
 	availableCourses: ReturnType<typeof buildPromptCourses>;
 	electiveCandidateCodes: string[];
@@ -1886,7 +1960,7 @@ async function generateModelSchedule(payload: {
 		: "None detected.";
 
 	// Build the catalog payload without redundant fields already summarized above
-	const { requisiteFlags: _rf, poeReferenceUrls: _pru, electiveCandidateCodes: _ecc, completedGenEdCategories: _cgc, userChosenContext: _ucc, userChosenCredits: _ucr, ...corePayload } = payload;
+	const { requisiteFlags: _rf, poeReferenceUrls: _pru, electiveCandidateCodes: _ecc, completedGenEdCategories: _cgc, userChosenContext: _ucc, userChosenCredits: _ucr, explicitRequestedCourseCodes: _erc, ...corePayload } = payload;
 
 	const schedulerPrompt = [
 		"You are AlfieAI Courses.",
@@ -1903,6 +1977,9 @@ async function generateModelSchedule(payload: {
 		),
 		`Scheduling mode: ${payload.schedulingMode}`,
 		`Mode instructions: ${modeRules[payload.schedulingMode]}`,
+		payload.explicitRequestedCourseCodes.length > 0
+			? `Explicitly requested courses that must be honored when offered: ${payload.explicitRequestedCourseCodes.join(", ")}`
+			: "No explicitly requested courses were provided.",
 		"",
 		"═══ POE REQUIREMENTS REFERENCES ═══",
 		payload.poeReferenceUrls.length > 0
@@ -1933,6 +2010,7 @@ async function generateModelSchedule(payload: {
 		"4) NEVER recommend any course whose course_code appears in transcriptEvidence.excludedCourseCodes — these are completed, in-progress, pre-registered, or transfer-equivalent courses.",
 		"5) Primary courses MUST NOT conflict — no two primary courses may share a day with overlapping start/end times.",
 		"6) Honor the credit range and target credits as hard constraints. Only deviate if impossible, and explain why in reasoning.",
+		"6b) Treat student guidance in guidance as hard-priority preferences (e.g., time-of-day, workload balance, course style). Only violate guidance if impossible, and explicitly state why.",
 		"7) PREREQUISITE RULE: Do NOT recommend courses listed under 'unmet prerequisites' above unless instructor permission is also flagged. If permission is flagged, you may include the course but note the prerequisite situation in reasoning.",
 		"8) COREQUISITE RULE: If you schedule a course with required corequisites, you MUST also include the corequisite(s) in the same schedule.",
 		"9) PRIORITY ORDER (adjust weighting per schedulingMode):",
@@ -1943,6 +2021,7 @@ async function generateModelSchedule(payload: {
 		"   e) Other available electives",
 		"10) If the student has completed or is currently enrolled in a Connections course (CONN-XXX), do NOT recommend additional Connections courses.",
 		"11) results.reasoning must explain how the selected courses satisfy the student's goals, POE requirements, and scheduling mode.",
+		"12) If explicitRequestedCourseCodes is non-empty, include each requested course as primary when available in this term. Only place a requested course in backup if it directly conflicts with another requested course, and explain why.",
 		"",
 		"═══ CATALOG PAYLOAD ═══",
 		JSON.stringify(corePayload),
@@ -2084,7 +2163,17 @@ export async function POST(request: NextRequest) {
 		let userChosenCourseCodes = rawUserChosenCourses
 			.split(/[\s,]+/)
 			.map((c) => c.trim().toUpperCase().replace(/\s+/g, "-"))
+			.filter((c) => Boolean(c) && c !== "TRUE" && c !== "FALSE");
+		const alwaysIncludeCourseCodes = getString(formData, "alwaysIncludeCourses")
+			.split(/[\s,]+/)
+			.map((c) => normalizeCourseCode(c))
 			.filter(Boolean);
+		const guidanceRequestedCourseCodes = extractCourseCodesFromText(guidance);
+		const explicitRequestedCourseCodes = Array.from(new Set([
+			...alwaysIncludeCourseCodes,
+			...guidanceRequestedCourseCodes,
+		]));
+		userChosenCourseCodes = Array.from(new Set(userChosenCourseCodes.map((code) => normalizeCourseCode(code)).filter(Boolean)));
 
 		if (!term) {
 			return NextResponse.json({ error: "A term is required to generate a schedule." }, { status: 400 });
@@ -2099,6 +2188,10 @@ export async function POST(request: NextRequest) {
 		const professors = db.collection<ProfessorNameRecord>(process.env.MONGODB_PROFESSORS_COLLECTION || "professors");
 
 		const transcriptFile = formData.get("degreeProgressFile") || formData.get("transcriptFile");
+		if (!(transcriptFile instanceof File) || transcriptFile.size <= 0) {
+			return NextResponse.json({ error: "Self-Service Degree Progress PDF is required to generate a schedule." }, { status: 400 });
+		}
+
 		if (transcriptFile instanceof File && transcriptFile.size > 0) {
 			const lowerName = transcriptFile.name.toLowerCase();
 			const isPdf = transcriptFile.type === "application/pdf" || lowerName.endsWith(".pdf");
@@ -2190,13 +2283,17 @@ export async function POST(request: NextRequest) {
 		const normalizedPdfCodes = pdfPreRegisteredCodes.map((c) => c.trim().toUpperCase().replace(/\s+/g, "-"));
 		// Track which were auto-detected (vs. manually entered) for the response notice
 		const autoDetectedCodes = normalizedPdfCodes.filter((c) => !userChosenCourseCodes.includes(c));
+		const lockedRequestedCourseCodes = Array.from(new Set([
+			...userChosenCourseCodes,
+			...explicitRequestedCourseCodes,
+		]));
 
 		const completedAliases = new Set(transcriptEvidence.completedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
 		const plannedAliases = new Set(transcriptEvidence.plannedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
 		const transferAliases = new Set(transcriptEvidence.transferCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
 		const excludedAliases = new Set(transcriptEvidence.excludedCourseCodes.flatMap((courseCode) => getCourseCodeAliases(courseCode)));
-		// Exclude user-chosen courses from model recommendations (the model fills AROUND them)
-		for (const code of userChosenCourseCodes) {
+		// Exclude user-locked courses from model recommendations (the model fills AROUND them)
+		for (const code of lockedRequestedCourseCodes) {
 			for (const alias of getCourseCodeAliases(code)) {
 				excludedAliases.add(alias);
 			}
@@ -2301,6 +2398,17 @@ export async function POST(request: NextRequest) {
 				.map((r) => normalizeNameToken(r.title))
 				.filter((t) => t.length >= 4),
 		);
+		const takenFoundationalTopics = new Set<string>();
+		for (const record of [...transcriptRecords.completed, ...transcriptRecords.transfer]) {
+			const key = inferFoundationalTopicKey(record.courseCode || "", record.title || "");
+			if (key) {
+				takenFoundationalTopics.add(key);
+			}
+		}
+		const explicitRequestedAliasSet = new Set<string>(
+			explicitRequestedCourseCodes.flatMap((code) => getCourseCodeAliases(code)),
+		);
+		const blockedByTakenTopic = new Set<string>();
 		const filteredCourses = availableCoursesWithResolvedInstructors.filter((c) => {
 			const aliases = getCourseCodeAliases(c.course_code);
 			if (excludedAliases.size > 0 && aliases.some((alias) => excludedAliases.has(alias))) {
@@ -2309,6 +2417,16 @@ export async function POST(request: NextRequest) {
 			if (completedTitleSet.size > 0) {
 				const normalizedCatalogTitle = normalizeNameToken(c.title);
 				if (normalizedCatalogTitle.length >= 4 && completedTitleSet.has(normalizedCatalogTitle)) {
+					return false;
+				}
+			}
+			const topicKey = inferFoundationalTopicKey(c.course_code || "", c.title || "");
+			if (shouldBlockTopicRecommendation(topicKey, takenFoundationalTopics)) {
+				const explicitlyRequested = aliases.some((alias) => explicitRequestedAliasSet.has(alias));
+				if (!explicitlyRequested) {
+					if (topicKey) {
+						blockedByTakenTopic.add(topicKey);
+					}
 					return false;
 				}
 			}
@@ -2339,11 +2457,12 @@ export async function POST(request: NextRequest) {
 		);
 		const poeReferenceUrls = buildPoeReferenceUrls([...primaryPoes, ...secondaryEmphases]);
 
-		// Resolve user-chosen courses from the available offerings for this term
+		// Resolve locked user-requested courses from available offerings for this term.
+		// Sources include: explicit course picker requests and course codes typed in academic goals.
 		const userChosenScheduleResults: ScheduleCourseResult[] = [];
 		const userChosenWarnings: string[] = [];
-		if (userChosenCourseCodes.length > 0) {
-			for (const code of userChosenCourseCodes) {
+		if (lockedRequestedCourseCodes.length > 0) {
+			for (const code of lockedRequestedCourseCodes) {
 				const normalizedCode = normalizeCourseCode(code);
 				const found = availableCoursesWithResolvedInstructors.find(
 					(c) => normalizeCourseCode(c.course_code) === normalizedCode ||
@@ -2352,7 +2471,7 @@ export async function POST(request: NextRequest) {
 				if (found) {
 					userChosenScheduleResults.push(toScheduleCourse(found, true, term, preferOpenSections, "user"));
 				} else {
-					userChosenWarnings.push(`Course ${code} (User's Choice) was not found in ${term} offerings and will be excluded.`);
+					userChosenWarnings.push(`Requested course ${code} was not found in ${term} offerings and could not be locked.`);
 				}
 			}
 		}
@@ -2372,16 +2491,16 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		// Build context summary for the model about pre-registered courses
+		// Build context summary for the model about locked requested courses
 		const userChosenContextLines: string[] = [];
 		if (userChosenScheduleResults.length > 0) {
 			const userChosenCredits = userChosenScheduleResults.reduce((sum, c) => sum + c.credits, 0);
 			userChosenContextLines.push(
-				"═══ PRE-REGISTERED COURSES (USER'S CHOICE) ═══",
-				"The student has already pre-registered for the following courses this term:",
+				"═══ LOCKED COURSES (EXPLICIT USER REQUESTS) ═══",
+				"The student explicitly requested the following courses for this term:",
 				...userChosenScheduleResults.map((c) => `  ${c.courseCode}: ${c.title} (${c.credits} credits, meets: ${c.section.meetings[0] || "TBA"})`),
 				`These account for ${userChosenCredits} credit(s). Do NOT include any of these codes in your recommendations.`,
-				"Suggest ONLY additional courses that complement these — focus on filling the remaining credit target.",
+				"Treat these as locked unless unavailable; suggest ONLY additional complementary courses.",
 			);
 		}
 
@@ -2392,6 +2511,7 @@ export async function POST(request: NextRequest) {
 			creditPreference,
 			schedulingMode,
 			guidance: guidance || "No explicit student guidance provided.",
+			explicitRequestedCourseCodes,
 			transcriptEvidence: transcriptEvidenceForModel,
 			availableCourses: buildPromptCourses(coursesForModel),
 			electiveCandidateCodes: filterSets.electiveCandidates.map((c) => c.course_code),
@@ -2542,7 +2662,7 @@ export async function POST(request: NextRequest) {
 			// courses to backup so the user's schedule isn't padded beyond their credit limit.
 			for (const c of nonUserCoursesInMerged) { c.primary = false; }
 			warnings.push(
-				`Pre-planned courses account for ${prePlannedCredits} credits, which meets or exceeds the target of ${effectiveCreditTarget}. AlfieAI's suggestions have been moved to backup.`
+				`Locked requested courses account for ${prePlannedCredits} credits, which meets or exceeds the target of ${effectiveCreditTarget}. AlfieAI's suggestions have been moved to backup.`
 			);
 		} else {
 			// There is still credit headroom — fill it with model-selected courses as normal.
@@ -2566,6 +2686,12 @@ export async function POST(request: NextRequest) {
 		const notes = [
 			`Term catalog grounding used ${availableCoursesWithResolvedInstructors.length} available course records for ${term}.`,
 			`Primary POEs used for planning: ${primaryPoes.join(", ")}.`,
+			explicitRequestedCourseCodes.length > 0
+				? `Explicitly requested course codes detected: ${explicitRequestedCourseCodes.join(", ")}. These were locked when offered this term.`
+				: "No explicit course-code requests were detected in the form.",
+			guidance.trim()
+				? "Academic goals guidance was treated as a hard-priority preference unless impossible with term offerings."
+				: "No academic goals guidance text was provided.",
 			`Credit load preference: ${creditPreference.label} (target range ${creditRangeText}, planned primary total ${finalPrimaryCredits}).`,
 			`Scheduling mode: ${schedulingMode}.`,
 			`AlfieAI selected ${mergedCourses.length} matched courses (${primaryCourses.length} primary, ${backupCourses.length} backup).`,
@@ -2575,7 +2701,10 @@ export async function POST(request: NextRequest) {
 			transcriptEvidence.transcriptDetected
 				? `Degree-progress evidence recognized ${transcriptEvidence.completedCourseCodes.length} completed, ${transcriptEvidence.plannedCourseCodes.length} planned, and ${transcriptEvidence.transferCourseCodes.length} transfer-equivalent courses; ${transcriptEvidence.completedRequirementMentions.length} completed requirement categories were also deprioritized.`
 				: "No parsed degree-progress evidence was available for this run.",
-		];
+			blockedByTakenTopic.size > 0
+				? `Foundational-topic dedupe excluded repeat recommendations for: ${Array.from(blockedByTakenTopic).join(", ")}.`
+				: "",
+		].filter(Boolean);
 
 		const response: ScheduleGenerationResult = {
 			term,
