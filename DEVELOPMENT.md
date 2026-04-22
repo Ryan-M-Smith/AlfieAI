@@ -84,14 +84,6 @@ curl -sS -X POST http://localhost:3000/api/courses/professors \
   -d '{"query":"","page":1,"pageSize":6}'
 ```
 
-Live token endpoint (for React live voice route):
-
-```bash
-curl -sS -X POST http://localhost:3000/api/live/token \
-  -H "Content-Type: application/json" \
-  -d '{"model":"gemini-live-2.5-flash-preview"}'
-```
-
 ## Release Checklist
 
 - pnpm install on a clean checkout
