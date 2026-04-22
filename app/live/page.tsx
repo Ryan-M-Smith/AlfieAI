@@ -5,8 +5,8 @@
 //
 
 import { FaMicrophone } from "react-icons/fa";
-import Link from "next/link";
 
+import LiveVoiceStudio from "@/components/live-voice-studio";
 import Navbar from "@/components/navbar";
 
 export const metadata = {
@@ -16,48 +16,14 @@ export const metadata = {
 
 export default function Live() {
 	return (
-		<div className="relative min-h-screen bg-black overflow-hidden">
-			<iframe
-				className="absolute inset-0 w-full h-full border-none z-0"
-				src="/index.html"
-				title="AlfieAI Live Chat"
-				allow="microphone"
-			/>
-			
-			<Navbar/>
-
-			<span className="pointer-events-none absolute inset-0 z-10 top-48 text-center px-2 sm:px-0">
-				<span className="flex justify-center items-center gap-x-1 relative text-4xl sm:text-7xl text-white font-big">
-					<span
-						className={`
-							absolute left-1/2 -translate-x-1/2 bottom-0 w-[60vw] sm:w-[30%] h-6 sm:h-8
-							bg-red-500 opacity-40 blur-md rounded-full z-[-1]
-						`}
-					/>
-					AlfieAI
-					<FaMicrophone className="justify-center" size={28}/>
-					<span className="text-red-500"> Live </span>
+		<div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-950 via-[#081927] to-[#170f0f]">
+			<Navbar />
+			<span className="pointer-events-none absolute inset-x-0 top-20 z-20 text-center">
+				<span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs uppercase tracking-[0.22em] text-zinc-100 backdrop-blur">
+					AlfieAI <FaMicrophone size={13} /> Live Voice
 				</span>
 			</span>
-
-			<span
-				className={`
-					pointer-events-none absolute bottom-2 left-0 w-full z-20 flex justify-center items-center gap-x-1
-					text-[10px] sm:text-xs italic text-default-500 text-serif text-center px-2
-				`}
-			>
-				Live audio chat powered by
-				<Link
-					className="underline pointer-events-auto whitespace-nowrap"
-					href="https://gemini.google/overview/gemini-live/"
-					rel="noopener noreferrer"
-					target="_blank"
-					passHref
-				>
-					Gemini Live.
-				</Link>
-				Generative AI is experimental and may make mistakes.
-			</span>
+			<LiveVoiceStudio />
 		</div>
 	);
 }
