@@ -127,6 +127,7 @@ export default function LiveVoiceStudio() {
 	const reconnectAttemptsRef = useRef(0);
 	const reconnectTimerRef = useRef<number | null>(null);
 	const connectingRef = useRef(false);
+	const lastOpenAtRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		isRecordingRef.current = isRecording;
@@ -445,7 +446,7 @@ export default function LiveVoiceStudio() {
 					model: payload.model,
 					callbacks: {
 						onopen: () => {
-							reconnectAttemptsRef.current = 0;
+							lastOpenAtRef.current = Date.now();
 							setConnectionState("connected");
 							setStatusText("Connected. Ready for voice.");
 							setErrorText("");
@@ -459,6 +460,9 @@ export default function LiveVoiceStudio() {
 						},
 						onclose: () => {
 							const wasManual = manualDisconnectRef.current;
+							const openDurationMs = lastOpenAtRef.current ? Date.now() - lastOpenAtRef.current : 0;
+							const wasStableOpen = openDurationMs >= 10_000;
+							const shouldAutoReconnect = shouldResumeRecordingRef.current || isRecordingRef.current;
 							sessionRef.current = null;
 							stopRecording();
 							clearPlaybackQueue();
@@ -468,6 +472,16 @@ export default function LiveVoiceStudio() {
 								setConnectionState("idle");
 								setStatusText("Disconnected.");
 								return;
+							}
+
+							if (!shouldAutoReconnect) {
+								setConnectionState("idle");
+								setStatusText("Disconnected. Press Start to reconnect.");
+								return;
+							}
+
+							if (wasStableOpen) {
+								reconnectAttemptsRef.current = 0;
 							}
 
 							if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
