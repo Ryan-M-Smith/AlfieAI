@@ -6,6 +6,7 @@ import { LuExternalLink, LuGraduationCap, LuSparkles } from "react-icons/lu";
 import { MdEmail } from "react-icons/md";
 import { useState } from "react";
 import { GrCatalogOption } from "react-icons/gr";
+import MarkdownRenderer from "./markdown-renderer";
 
 interface Offering {
 	course_code: string;
@@ -132,7 +133,7 @@ export default function ProfessorDetailView({ professor, offeringsByTerm }: Prof
 						onPress={() => void generateInsights()}
 						isLoading={loadingInsights}
 					>
-						AI insights
+						AlfieAI Insights
 					</Button>
 				</div>
 
@@ -160,7 +161,9 @@ export default function ProfessorDetailView({ professor, offeringsByTerm }: Prof
 								Dismiss
 							</Button>
 						</div>
-						<p className="whitespace-pre-wrap text-sm mt-1 text-secondary-900">{insights}</p>
+						<div className="mt-1 text-sm text-secondary-900">
+							<MarkdownRenderer content={insights} />
+						</div>
 					</div>
 				)}
 			</div>

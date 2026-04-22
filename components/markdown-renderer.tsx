@@ -17,7 +17,7 @@ interface MarkdownRendererProps {
 export default function MarkdownRenderer({ content }: MarkdownRendererProps): JSX.Element {
 	return (
 		<div className={`
-			prose prose-sm sm:prose-base max-w-none text-foreground leading-relaxed
+			prose prose-base prose-sm max-w-none text-foreground leading-relaxed
 			prose-p:my-2 prose-p:leading-relaxed prose-p:text-foreground prose-headings:mt-4 prose-headings:mb-2
 			prose-headings:text-foreground
 			prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-ul:pl-5 prose-ol:pl-5
@@ -41,6 +41,9 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps): JS
 						}}>
 							{props.children}
 						</a>
+					),
+					ul: ({ ...props }) => (
+						<ul {...props} className={`ml-10 list-disc`} />
 					)
 				}}
 			>
