@@ -1,0 +1,115 @@
+.alfie-thinking {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.2rem;
+	font-size: 1.05rem;
+	font-weight: 650;
+	line-height: 1.35;
+	--alfie-rainbow: linear-gradient(
+		90deg,
+		#be123c 0%,
+		#c2410c 14%,
+		#a16207 28%,
+		#15803d 42%,
+		#0f766e 56%,
+		#1d4ed8 70%,
+		#6d28d9 84%,
+		#be185d 100%
+	);
+	--alfie-rainbow-duration: 5.2s;
+}
+
+.alfie-thinking-spinner {
+	width: 68px;
+	height: 68px;
+	border-radius: 9999px;
+	background: conic-gradient(from 0deg, transparent 0%, #be123c 18%, #a16207 34%, #15803d 50%, #1d4ed8 66%, #6d28d9 82%, transparent 100%);
+	-webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+	mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+	animation: alfie-rainbow-spin 1.1s linear infinite;
+}
+
+.alfie-thinking-phrase {
+	display: inline-flex;
+	align-items: baseline;
+	white-space: pre;
+	text-decoration: none;
+	background-image: var(--alfie-rainbow);
+	background-size: 240% 100%;
+	background-position: 0% 50%;
+	background-repeat: no-repeat;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+	animation: alfie-phrase-reveal 560ms cubic-bezier(0.22, 0.61, 0.36, 1) both, alfie-rainbow-slide var(--alfie-rainbow-duration) linear infinite;
+}
+
+.alfie-thinking-dots {
+	display: inline-block;
+	width: 3ch;
+	margin-left: 0.08em;
+	white-space: pre;
+	text-align: left;
+}
+
+@keyframes alfie-phrase-reveal {
+	0% {
+		opacity: 0;
+		clip-path: inset(0 100% 0 0);
+		transform: translateY(2px);
+		filter: blur(2px);
+	}
+
+	100% {
+		opacity: 1;
+		clip-path: inset(0 0 0 0);
+		transform: translateY(0);
+		filter: blur(0);
+	}
+}
+
+@keyframes alfie-rainbow-slide {
+	0% {
+		background-position: 0% 50%;
+	}
+
+	100% {
+		background-position: 240% 50%;
+	}
+}
+
+@keyframes alfie-rainbow-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.dark .alfie-thinking {
+	--alfie-rainbow: linear-gradient(
+		90deg,
+		#fb7185 0%,
+		#fb923c 14%,
+		#facc15 28%,
+		#4ade80 42%,
+		#22d3ee 56%,
+		#60a5fa 70%,
+		#a78bfa 84%,
+		#f472b6 100%
+	);
+	--alfie-rainbow-duration: 5.8s;
+}
+
+.dark .alfie-thinking-spinner {
+	background: conic-gradient(from 0deg, transparent 0%, #fb7185 18%, #facc15 34%, #4ade80 50%, #60a5fa 66%, #a78bfa 82%, transparent 100%);
+}
+
+@media (max-width: 640px) {
+	.alfie-thinking {
+		font-size: 0.95rem;
+	}
+}

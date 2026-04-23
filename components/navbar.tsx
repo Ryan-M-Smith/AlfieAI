@@ -13,6 +13,7 @@ import Image from "next/image";
 import { IoIosArrowBack, IoIosArrowDown } from "react-icons/io";
 import { JSX } from "react";
 import Link from "next/link";   
+import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,6 +22,7 @@ import { getPage, Page, pages } from "@/lib/pages";
 export default function Navbar(): JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
+	const { data: session, status } = useSession();
 
 	const [isMobile, setIsMobile] = useState(false);
 
@@ -65,15 +67,15 @@ export default function Navbar(): JSX.Element {
 				dark:bg-zinc-950/45 border-slate-300 backdrop-blur-lg bg-transparent
 			`}>
 				<div className="flex items-center gap-x-4 pl-1">
-					<Dropdown disableAnimation>
+					<Dropdown classNames={{ content: "rounded-[20px]" }} disableAnimation>
 						<DropdownTrigger>
-							<Button variant="ghost" endContent={<IoIosArrowDown size={20}/>}>
+							<Button variant="ghost" radius="full" endContent={<IoIosArrowDown size={20}/>}>
 								{page.card}
 							</Button>
 						</DropdownTrigger>
 
-						<DropdownMenu aria-label="Static Actions" disabledKeys={ [page.name] }>
-							<DropdownSection title="Tools">
+						<DropdownMenu aria-label="Static Actions" disabledKeys={[ page.name ]}>
+							<DropdownSection title="Tools" classNames={{ heading: "text-[10px] font-semibold uppercase tracking-[0.22em]"}}>
 								{ Object.values(tools).map((page: Page) => (
 									<DropdownItem 
 										key={page.name} 
@@ -86,7 +88,7 @@ export default function Navbar(): JSX.Element {
 								))}
 							</DropdownSection>
 
-							<DropdownSection title="Info">
+							<DropdownSection title="Info" classNames={{ heading: "text-[10px] font-semibold uppercase tracking-[0.22em]"}}>
 								{ Object.values(info).map((page: Page) => (
 									<DropdownItem 
 										key={page.name} 
@@ -105,7 +107,25 @@ export default function Navbar(): JSX.Element {
 				</div>
 				
 				<div className="flex gap-2 pr-1">
-					<Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
+					{status !== "loading" && (
+						<Button
+							className="hidden font-medium"
+							radius="full"
+							variant="flat"
+							onPress={async () => {
+								if (session?.user) {
+									void signOut({ callbackUrl: pathname });
+									return;
+								}
+
+								void signIn(undefined, { callbackUrl: pathname });
+							}}
+						>
+							{session?.user ? "Sign out" : "Sign in"}
+						</Button>
+					)}
+
+					{/* <Link href="https://github.com/Ryan-M-Smith/AlfieAI" target="_blank" rel="noopener noreferrer">
 						<Button
 							className={`
 								flex items-center justify-center rounded-[10px]
@@ -118,12 +138,12 @@ export default function Navbar(): JSX.Element {
 						/>
 					</Link>
 
-					<div className="border-r border-default-400"/>
+					<div className="border-r border-default-400"/> */}
 
 					<Link href="/">
 						<Image
 							className="inline-block mr-2 rounded-[10px]"
-							src="/logo.png"
+							src="/images/logo.png"
 							alt="AlfieAI Logo"
 							width={40}
 							height={40}

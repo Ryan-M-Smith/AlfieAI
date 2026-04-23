@@ -13,7 +13,8 @@ import { ReactNode } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import CookieConsentDialog from "@/components/cookie-consent";
-import { fontBig, fontBubble, fontRacing, fontCursive, fontMono, fontSans } from "@/config/fonts";
+import DataGridLines from "@/components/data-grid-lines";
+import { fontBig, fontBubble, fontChalkboard, fontRacing, fontCursive, fontMono, fontSans } from "@/config/fonts";
 import { siteConfig } from "@/config/site";
 import { Providers } from "@/components/providers";
 import React from "react";
@@ -40,16 +41,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	const fonts = `
-		${fontBig.variable}
-		${fontBubble.variable}
+		${fontSans.variable}
+		${fontMono.variable}
+		${fontChalkboard.variable}
 		${fontRacing.variable}
 		${fontCursive.variable}
-		${fontMono.variable}
-		${fontSans.variable}
+		${fontBig.variable}
+		${fontBubble.variable}
 	`;
 
 	return (
-		<html className={`dark:bg-zinc-950/80 light:bg-gray-100 overscroll-none`} lang="en" suppressHydrationWarning>
+		<html className={`dark:bg-zinc-950/80 light:bg-gray-100 overscroll-auto`} lang="en" suppressHydrationWarning>
 			<head>
 				<meta name="google-site-verification" content="9vfCGFrG_b3GRRS8iTZ1tIYAe_Ek0OhxcQgsVKzeza8"/>
 
@@ -65,6 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 					enableSystem: true,
 					disableTransitionOnChange: true
 				}}>
+					<DataGridLines />
 					<CookieConsentDialog/>
 
 					{children}

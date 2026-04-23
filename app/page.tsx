@@ -12,5 +12,7 @@ export const metadata = {
 };
 
 export default function Chat() {
-	return <ChatView/>;
+	return (
+		<ChatView/>
+	);
 }

@@ -7,15 +7,15 @@
 "use client";
 
 import { Button } from "@heroui/button";
+import { Textarea } from "@heroui/input";
 import { FaArrowCircleUp } from "react-icons/fa";
 import { gsap } from "gsap";
 import { IoSearch } from "react-icons/io5";
 import {
 	Dispatch, JSX, KeyboardEvent, SetStateAction, useCallback,
-	useEffect, useRef, useState
+	useEffect, useRef, useState, useTransition
 } from "react";
 import { useRouter } from "next/navigation";
-import { Textarea } from "@heroui/input";
 
 import placeholders from "@/lib/placeholders";
 import { delay } from "framer-motion";
@@ -33,6 +33,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	const [canSend, setCanSend] = useState<boolean>(false);
 	const [placeholder, setPlaceholder] = useState<string>("");
 	const [isCleared, setIsCleared] = useState(false);
+	const [isPending, startTransition] = useTransition();
 
 	/**
 	 * Reset GSAP animations when the document visibility changes to avoid rendering issues
@@ -51,13 +52,6 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 		document.addEventListener("visibilitychange", onChangeVisibility);
 		return () => document.removeEventListener("visibilitychange", onChangeVisibility);
 	}, [onChangeVisibility]);
-
-	// Reset the query state on mount
-	useEffect(() => {
-		if (!canSend) {
-			setQuery("");
-		}
-	}, [canSend]);
 
 	// Animate the placeholder text for the search box
 	useEffect(() => {
@@ -159,7 +153,7 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 			startContent={<FaArrowCircleUp className="-z-5" size={30}/>} 
 			onPress={sendQuery}
 			isIconOnly
-			isDisabled={!canSend}
+			isDisabled={!canSend || isPending}
 		/>
 	);
 
@@ -167,23 +161,20 @@ export default function SearchBox({ setIsSearching }: SearchBoxProps): JSX.Eleme
 	 * Send a search query to the server and navigate to the results page
 	 */
 	const sendQuery = () => {
-		if (!canSend) {
+		if (!canSend || query === "" || isPending) {
 			return;
 		}
-
-		if (query === "") {
-			router.push("/people");
-		}
+		
+		const encodedQuery = encodeURIComponent(query);
+		startTransition(() => {
+			router.push(`/people/search?query=${encodedQuery}`);
+		});
 
 		if (setIsSearching) {
 			setIsSearching(true);
 			setIsCleared(true);
 		}
 
-		const encodedQuery = encodeURIComponent(query);
-		router.push(`/people/search?query=${encodedQuery}`);
-
-		setCanSend(false);
 	}
 
 	const handleUrlChange = () => {

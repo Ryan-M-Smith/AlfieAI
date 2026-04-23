@@ -26,15 +26,15 @@ export default function Hero(): JSX.Element {
 	)`;
 
 	return (
-		<div className="flex justify-center items-center mx-5 h-screen dark:text-white text-black text-center pb-20 rounded-[16px]">
+		<div className="flex justify-center items-center mx-5 h-screen dark:text-white text-black text-center pb-20 rounded-4xl">
 			<div className="relative">
 				<div className={`
 					flex flex-col justify-center items-center dark:bg-default-50 bg-blue-200
-					dark:text-gray-200 p-6 sm:p-10 rounded-[16px]
+					dark:text-gray-200 p-6 sm:p-10 rounded-4xl
 				`}>
 					<Image
-						className="rounded-[16px]"
-						src="/logo.png"
+						className="rounded-4xl"
+						src="/images/logo.png"
 						alt="AlfieAI logo"
 						width={192}
 						height={192}
@@ -86,7 +86,7 @@ export default function Hero(): JSX.Element {
 				</div>
 
 				<motion.div
-					className="absolute -inset-[6px] sm:-inset-[10px] -z-10 rounded-[16px] shadow-lg dark:shadow-blue-300 shadow-gray-700"
+					className="absolute -inset-1.5 sm:-inset-2.5 -z-10 rounded-4xl shadow-lg dark:shadow-blue-300 shadow-gray-700"
 					style={{ background: bg }}
 				/>
 			</div>

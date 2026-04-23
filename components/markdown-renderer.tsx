@@ -16,16 +16,18 @@ interface MarkdownRendererProps {
 
 export default function MarkdownRenderer({ content }: MarkdownRendererProps): JSX.Element {
 	return (
-		<span className={`
-			prose text-default-foreground prose-p:my-0 prose-p:leading-snug prose-li:my-0
-			prose-ul:leading-snug prose-ul:my-0 prose-ol:leading-snug prose-ol:my-0 prose-li:leading-snug prose-ul:pl-5
-			prose-li:pl-0 prose-ul:list-disc dark:prose-a:text-blue-400 prose-a:text-primary
-			prose-headings:text-default-foreground prose-headings:my-0 prose-strong:text-default-foreground
-			prose-strong:font-bold prose-headings:leading-none prose-code:font-mono
-			prose-li:marker:text-default-foreground prose-h1:text-center
+		<div className={`
+			prose prose-base prose-sm max-w-none text-foreground leading-relaxed
+			prose-p:my-2 prose-p:leading-relaxed prose-p:text-foreground prose-headings:mt-4 prose-headings:mb-2
+			prose-headings:text-foreground
+			prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-ul:pl-5 prose-ol:pl-5
+			prose-ul:list-disc prose-ol:list-decimal prose-ul:text-foreground prose-ol:text-foreground
+			prose-li:text-foreground prose-li:marker:text-foreground prose-strong:text-foreground prose-strong:font-semibold prose-code:font-mono
+			prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none
+			prose-a:text-foreground prose-a:underline prose-pre:my-3
 			prose-blockquote:border-l-4 prose-blockquote:border-default prose-blockquote:pl-4
-			prose-blockquote:italic prose-blockquote:text-foreground-500 prose-blockquote:bg-foreground/10
-			prose-blockquote:my-0 prose-blockquote:py-2 wrap-break-word
+			prose-blockquote:italic prose-blockquote:text-foreground prose-blockquote:bg-foreground/10
+			prose-blockquote:py-2 prose-blockquote:my-2 wrap-break-word
 		`}>
 			<Markdown
 				remarkPlugins={[remarkGfm]}
@@ -39,11 +41,14 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps): JS
 						}}>
 							{props.children}
 						</a>
+					),
+					ul: ({ ...props }) => (
+						<ul {...props} className={`ml-10 list-disc`} />
 					)
 				}}
 			>
 				{content}
 			</Markdown>
-		</span>
+		</div>
 	)
 }

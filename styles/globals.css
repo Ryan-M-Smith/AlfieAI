@@ -1,9 +1,65 @@
 @import "tailwindcss";
+@import "@heroui/styles";
+@import "./loading-effects.css";
 
 @plugin "../lib/heroui.ts";
 @plugin "@tailwindcss/typography";
 
-@source "../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
 @custom-variant dark (&:is(.dark *));
 
 @config "../tailwind.config.js";
+
+@keyframes alfie-rainbow-shift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+.alfie-rainbow-word {
+	color: transparent;
+	background-image: linear-gradient(90deg, #22d3ee, #34d399, #facc15, #fb7185, #a78bfa, #22d3ee);
+	background-size: 240% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: alfie-rainbow-shift 6s ease infinite;
+}
+
+.alfie-rainbow-chip {
+	color: #fff;
+	background-image:
+		linear-gradient(rgba(15, 23, 42, 0.36), rgba(15, 23, 42, 0.36)),
+		linear-gradient(90deg, #22d3ee, #34d399, #facc15, #fb7185, #a78bfa, #22d3ee);
+	background-size: 100% 100%, 240% 100%;
+	background-position: 0 0, 0% 50%;
+	background-repeat: no-repeat;
+	border-color: rgba(255, 255, 255, 0.22);
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+	animation: alfie-rainbow-shift 6s ease infinite;
+}
+
+.dark .alfie-rainbow-chip {
+	background-image:
+		linear-gradient(rgba(9, 9, 11, 0.28), rgba(9, 9, 11, 0.28)),
+		linear-gradient(90deg, #22d3ee, #34d399, #facc15, #fb7185, #a78bfa, #22d3ee);
+	border-color: rgba(255, 255, 255, 0.14);
+	box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.alfie-rainbow-word {
+		animation: none;
+		background-position: 50% 50%;
+	}
+
+	.alfie-rainbow-chip {
+		animation: none;
+		background-position: 0 0, 50% 50%;
+	}
+}

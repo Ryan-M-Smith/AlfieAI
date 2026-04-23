@@ -4,7 +4,6 @@
 // Copyright (c) 2025 Ryan Smith <rysmith2113@gmail.com>
 //
 
-import { Button } from "@heroui/button";
 import { JSX } from "react";
 import Link from "next/link";
 import { PiGavelFill } from "react-icons/pi";
@@ -50,27 +49,27 @@ export default function Policies(): JSX.Element {
 				<div className="sm:flex sm:justify-center mt-5 w-4/5 sm:max-w-lg">
 					<div className="sm:bg-default bg-none rounded-full flex flex-col sm:flex-row gap-2 sm:gap-4">
 						<Link href="/policies/privacy" className="flex-1">
-							<Button className="w-full hover:bg-orange-500" radius="full">
+							<span className="w-full inline-flex items-center justify-center rounded-full px-4 py-2 bg-default hover:bg-orange-500 transition-colors">
 								Privacy Policy
-							</Button>
+							</span>
 						</Link>
 
 						<Link href="/policies/terms" className="flex-1">
-							<Button className="w-full hover:bg-orange-500" radius="full">
+							<span className="w-full inline-flex items-center justify-center rounded-full px-4 py-2 bg-default hover:bg-orange-500 transition-colors">
 								Terms of Service
-							</Button>
+							</span>
 						</Link>
 
 						<Link href="/policies/cookies" className="flex-1">
-							<Button className="w-full hover:bg-orange-500" radius="full">
+							<span className="w-full inline-flex items-center justify-center rounded-full px-4 py-2 bg-default hover:bg-orange-500 transition-colors">
 								Cookie Policy
-							</Button>
+							</span>
 						</Link>
 						
 						<Link href="/policies/disclaimers" className="flex-1">
-							<Button className="w-full hover:bg-orange-500" radius="full">
+							<span className="w-full inline-flex items-center justify-center rounded-full px-4 py-2 bg-default hover:bg-orange-500 transition-colors">
 								Disclaimers
-							</Button>
+							</span>
 						</Link>
 					</div>
 				</div>

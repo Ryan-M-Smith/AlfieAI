@@ -1,6 +1,7 @@
 import {
 	Fira_Code as FontMono,
 	Inter as FontSans,
+	Schoolbell as FontChalkboard,
 	Dancing_Script as FontCursive,
 	Black_Ops_One as FontBig,
 	Modak as FontBubble,
@@ -20,6 +21,12 @@ export const fontMono = FontMono({
 export const fontCursive = FontCursive({
 	subsets: ["latin"],
 	variable: "--font-cursive",
+});
+
+export const fontChalkboard = FontChalkboard({
+	subsets: ["latin"],
+	variable: "--font-chalkboard",
+	weight: "400"
 });
 
 export const fontBig = FontBig({
