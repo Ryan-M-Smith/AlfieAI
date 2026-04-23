@@ -165,7 +165,7 @@
   * All model prompts are now stored in `/prompts` and loaded dynamically
   * Responses are being tested with a chunk-style API to see if it improves response speed
 
-## v6.0.0 - 4/23/26
+## v6.0.0 - 4/22/26
 
 * Introducing AlfieAI Courses
   * Three main features - course catalog, schedule builder, and faculty directory
