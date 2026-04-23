@@ -1,13 +1,5 @@
 # AlfieAI Changelog
 
-## v6.0.1 - 4/22/26
-
-* Release readiness update
-  * Migrated lint configuration to ESLint 9 flat config (`eslint.config.mjs`)
-  * Tuned lint policy to prioritize release-critical signals over broad style noise
-  * Re-ran production build and API smoke checks for Courses endpoints
-  * Documented local verification and release checklist commands in `README.md`
-
 ## v1.0.0 - 4/23/25
 
 * Initial release of the AlfieAI Chat (live at [https://alfieai.fyi](https://alfieai.fyi))
@@ -191,3 +183,8 @@
 * AlfieAI Events
   * All new chat updates from AlfieAI Chat
   * Refreshed event chat atmospherics and updated user bubble gradients/border treatment
+* Code coverage
+  * Migrated lint configuration to ESLint 9 flat config (`eslint.config.mjs`)
+  * Tuned lint policy to prioritize release-critical signals over broad style noise
+  * Re-ran production build and API smoke checks for Courses endpoints
+  * Documented local verification and release checklist commands in `README.md`
